@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" role="img" aria-labelledby="groomTitle groomDesc">
+  <title id="groomTitle">Groom placeholder illustration</title>
+  <desc id="groomDesc">Replace public/images/groom-placeholder.svg with a photo of the groom, or update groomImage in src/config.js.</desc>
+  <rect width="600" height="800" fill="#FBF6EC"/>
+  <path d="M70 760 V300 Q70 70 300 48 Q530 70 530 300 V760 Z" fill="#6E1E2C"/>
+  <path d="M98 760 V318 Q98 112 300 92 Q502 112 502 318 V760 Z" fill="#F8F1E2"/>
+  <path d="M48 210 C120 80 190 120 210 200 C150 150 90 170 48 210 Z" fill="#2F6B45"/>
+  <path d="M552 210 C480 80 410 120 390 200 C450 150 510 170 552 210 Z" fill="#2F6B45"/>
+  <path d="M250 250 Q300 210 350 250 Q330 230 300 228 Q270 230 250 250 Z" fill="#6E1E2C"/>
+  <rect x="248" y="246" width="104" height="16" rx="6" fill="#C8962E"/>
+  <ellipse cx="300" cy="330" rx="54" ry="66" fill="#D9A066"/>
+  <path d="M246 318 Q300 292 354 318 Q348 300 300 296 Q252 300 246 318 Z" fill="#3B241C"/>
+  <path d="M268 328 Q276 324 284 330" fill="none" stroke="#5C3A28" stroke-width="2" stroke-linecap="round"/>
+  <path d="M316 330 Q324 324 332 328" fill="none" stroke="#5C3A28" stroke-width="2" stroke-linecap="round"/>
+  <ellipse cx="276" cy="340" rx="3" ry="3.4" fill="#3B241C"/>
+  <ellipse cx="324" cy="340" rx="3" ry="3.4" fill="#3B241C"/>
+  <path d="M286 372 Q300 382 314 372" fill="none" stroke="#8A5338" stroke-width="2" stroke-linecap="round"/>
+  <path d="M248 400 Q300 430 352 400 L372 470 L228 470 Z" fill="#F4E4BC"/>
+  <path d="M214 470 Q300 430 386 470 L400 690 Q300 730 200 690 Z" fill="#6E1E2C"/>
+  <path d="M300 470 V680" stroke="#C8962E" stroke-width="3"/>
+  <circle cx="300" cy="510" r="4" fill="#E2B657"/>
+  <circle cx="300" cy="545" r="4" fill="#E2B657"/>
+  <circle cx="300" cy="580" r="4" fill="#E2B657"/>
+  <circle cx="300" cy="615" r="4" fill="#E2B657"/>
+  <path d="M210 620 H390 L400 760 H200 Z" fill="#F4E4BC"/>
+  <path d="M228 690 H372" stroke="#C8962E" stroke-width="4"/>
+  <path d="M40 48 H560" stroke="#C8962E" stroke-width="8"/>
+  <path d="M40 64 H560" stroke="#6E1E2C" stroke-width="2"/>
+  <text x="300" y="778" text-anchor="middle" font-family="Georgia, serif" font-size="18" fill="#6E1E2C">Groom placeholder</text>
+</svg>

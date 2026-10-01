@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" role="img" aria-labelledby="brideTitle brideDesc">
+  <title id="brideTitle">Bride placeholder illustration</title>
+  <desc id="brideDesc">Replace public/images/bride-placeholder.svg with a photo of the bride, or update brideImage in src/config.js.</desc>
+  <rect width="600" height="800" fill="#FBF6EC"/>
+  <path d="M70 760 V300 Q70 70 300 48 Q530 70 530 300 V760 Z" fill="#6E1E2C"/>
+  <path d="M98 760 V318 Q98 112 300 92 Q502 112 502 318 V760 Z" fill="#F8F1E2"/>
+  <path d="M48 210 C120 80 190 120 210 200 C150 150 90 170 48 210 Z" fill="#2F6B45"/>
+  <path d="M552 210 C480 80 410 120 390 200 C450 150 510 170 552 210 Z" fill="#2F6B45"/>
+  <circle cx="300" cy="236" r="28" fill="#3B241C"/>
+  <circle cx="262" cy="228" r="5" fill="#FFFDF8"/>
+  <circle cx="278" cy="214" r="5" fill="#FFFDF8"/>
+  <circle cx="300" cy="208" r="5" fill="#FFFDF8"/>
+  <circle cx="322" cy="214" r="5" fill="#FFFDF8"/>
+  <circle cx="338" cy="228" r="5" fill="#FFFDF8"/>
+  <circle cx="264" cy="228" r="1.6" fill="#C8962E"/>
+  <circle cx="280" cy="214" r="1.6" fill="#C8962E"/>
+  <circle cx="300" cy="208" r="1.6" fill="#C8962E"/>
+  <circle cx="322" cy="214" r="1.6" fill="#C8962E"/>
+  <circle cx="336" cy="228" r="1.6" fill="#C8962E"/>
+  <ellipse cx="300" cy="330" rx="54" ry="66" fill="#D9A066"/>
+  <path d="M246 330 Q248 270 300 262 Q352 270 354 330 Q330 300 300 296 Q270 300 246 330 Z" fill="#3B241C"/>
+  <path d="M268 328 Q276 324 284 330" fill="none" stroke="#5C3A28" stroke-width="2" stroke-linecap="round"/>
+  <path d="M316 330 Q324 324 332 328" fill="none" stroke="#5C3A28" stroke-width="2" stroke-linecap="round"/>
+  <ellipse cx="276" cy="340" rx="3" ry="3.4" fill="#3B241C"/>
+  <ellipse cx="324" cy="340" rx="3" ry="3.4" fill="#3B241C"/>
+  <path d="M286 372 Q300 382 314 372" fill="none" stroke="#8A5338" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="246" cy="348" r="5" fill="#C8962E"/>
+  <circle cx="354" cy="348" r="5" fill="#C8962E"/>
+  <path d="M262 392 Q300 408 338 392" fill="none" stroke="#C8962E" stroke-width="3"/>
+  <circle cx="300" cy="404" r="4" fill="#E2B657"/>
+  <path d="M236 430 Q300 470 364 430 L390 520 L210 520 Z" fill="#F8F1E2"/>
+  <path d="M200 500 Q300 450 400 500 L430 760 H170 Z" fill="#6E1E2C"/>
+  <path d="M250 470 Q300 430 470 560 L440 590 Q300 470 230 520 Z" fill="#8C3142"/>
+  <path d="M248 468 Q300 428 468 558" fill="none" stroke="#E2B657" stroke-width="6"/>
+  <path d="M40 48 H560" stroke="#C8962E" stroke-width="8"/>
+  <path d="M40 64 H560" stroke="#6E1E2C" stroke-width="2"/>
+  <text x="300" y="778" text-anchor="middle" font-family="Georgia, serif" font-size="18" fill="#6E1E2C">Bride placeholder</text>
+</svg>
