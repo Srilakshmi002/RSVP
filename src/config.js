@@ -10,9 +10,12 @@ export const wedding = {
   brideFirst: 'Anusha',
   brideLast: 'Mandava',
 
-  // Placeholder illustrations. Replace these files, or point these at your own images in public/.
-  groomImage: '/images/groom-placeholder.svg',
-  brideImage: '/images/bride-placeholder.svg',
+  // Couple photographs. Replace these files, or point these at your own images in public/.
+  groomImage: '/images/groom.jpg',
+  brideImage: '/images/bride.jpg',
+  introPoster: '/images/couple-poster.jpg',
+  introVideo: '/video/intro.mp4',
+  coupleAudio: '/audio/kudmayi.m4a',
 
   date: 'Wednesday, October 14, 2026',
   shortDate: '10.14.2026',
