@@ -32,14 +32,14 @@ The browser tab title is set from those names when the page loads. Also update t
 
 ### Couple portraits
 
-Placeholder illustrations live in:
+The invitation shows the couple in traditional wedding clothes:
 
-- `public/images/groom-placeholder.svg`
-- `public/images/bride-placeholder.svg`
+- `public/images/groom.jpg`
+- `public/images/bride.jpg`
 
-Replace those files with your photos (keep the same names), or change `groomImage` and `brideImage` in `src/config.js` to new files in `public/`. The opening animation and the invitation both use these paths.
+Replace those files with your photos (keep the same names), or change `groomImage` and `brideImage` in `src/config.js` to new files in `public/`. The invitation uses these paths.
 
-The opening plays once each time the page loads. **Skip intro** dismisses it. Guests who prefer reduced motion skip the animation and see the invitation immediately. There is no music.
+The opening plays a short silent film, `public/video/intro.mp4`. It starts on its own, muted, inline, and looping, with no playback controls. `public/images/couple-poster.jpg` shows while the film loads, and it is what guests see instead of the film when they prefer reduced motion. **Skip intro** dismisses the opening. There is no music.
 
 ### Additional guests
 

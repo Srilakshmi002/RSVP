@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, ArrowUpRight, Check, Heart, MapPin, Menu, X } from 'lucide-react';
 import { MEAL_OPTIONS } from '../shared/meals.js';
 import { coupleNames, venueMapsUrl, wedding as w } from './config';
-import { BananaLeaf, BrassLamp, JasmineGarland, Kolam } from './decor';
+import CoupleFilm from './CoupleFilm';
+import { BrassLamp, Kolam, SilkBorder } from './decor';
 import Intro from './Intro';
 
 function MapsLink() {
@@ -30,15 +31,13 @@ function MealPicker({ name, legend, value, onChange }) {
 }
 
 export default function App() {
-  const playIntro = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const [showIntro, setShowIntro] = useState(playIntro);
+  const [showIntro, setShowIntro] = useState(true);
   const [menu, setMenu] = useState(false);
   const [attendance, setAttendance] = useState('yes');
   const [additionalGuests, setAdditionalGuests] = useState(0);
   const [primaryMeal, setPrimaryMeal] = useState('');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
-  const [dietary, setDietary] = useState('');
   const [note, setNote] = useState('');
   const [status, setStatus] = useState('idle');
   const [error, setError] = useState('');
@@ -47,7 +46,7 @@ export default function App() {
   const headingRef = useRef(null);
   const successRef = useRef(null);
   const errorRef = useRef(null);
-  const introWasOpen = useRef(playIntro);
+  const introWasOpen = useRef(true);
 
   useEffect(() => {
     document.title = `${coupleNames('full')} — Our Wedding`;
@@ -97,7 +96,7 @@ export default function App() {
       attendance,
       meal: attending ? primaryMeal : '',
       additionalGuests: attending ? additionalGuests : 0,
-      dietary: attending ? dietary.trim() : '',
+      dietary: '',
       message: note.trim(),
     };
     try {
@@ -139,6 +138,8 @@ export default function App() {
       <div className="site" inert={showIntro ? true : undefined}>
         <a className="skip-link" href="#rsvp">Skip to RSVP</a>
         <header>
+          <SilkBorder />
+          <div className="header-bar">
           <a className="monogram" href="#home" aria-label={`${coupleNames('full')}, back to top`}>
             {w.groomFirst[0]}<span>&</span>{w.brideFirst[0]}
           </a>
@@ -151,6 +152,7 @@ export default function App() {
             ))}
             <a className="nav-rsvp" href="#rsvp" onClick={() => setMenu(false)}>Kindly RSVP <ArrowUpRight size={15} aria-hidden="true" /></a>
           </nav>
+          </div>
         </header>
         <main>
           <section className="hero" id="home">
@@ -161,24 +163,13 @@ export default function App() {
                 <em>&</em>
                 <span className="person">{w.brideFirst} <span className="surname">{w.brideLast}</span></span>
               </h1>
-              <JasmineGarland className="hero-garland" />
               <p className="hero-sub">We would be honoured to celebrate our wedding with you.</p>
               <a className="button" href="#rsvp">Join our celebration <ArrowUpRight size={17} aria-hidden="true" /></a>
               <div className="hero-date"><span>{w.shortDate}</span><i />{w.venue}</div>
             </div>
             <div className="hero-art">
-              <BananaLeaf className="leaf left" />
-              <BananaLeaf className="leaf right" flip />
-              <div className="portrait-pair">
-                <figure>
-                  <img src={w.groomImage} width="600" height="800" alt={`${w.groomFirst} ${w.groomLast}`} />
-                  <figcaption>{w.groomFirst}</figcaption>
-                </figure>
-                <BrassLamp className="hero-lamp" />
-                <figure>
-                  <img src={w.brideImage} width="600" height="800" alt={`${w.brideFirst} ${w.brideLast}`} />
-                  <figcaption>{w.brideFirst}</figcaption>
-                </figure>
+              <div className="couple-film hero-film">
+                <CoupleFilm active={!showIntro} />
               </div>
             </div>
           </section>
@@ -196,7 +187,11 @@ export default function App() {
           </section>
 
           <section className="rsvp-section" id="rsvp">
-            <img className="rsvp-garland" src="/images/floral-garland.png" width="1195" height="505" alt="" aria-hidden="true" />
+            <div className="rsvp-garland-row">
+              <img className="garland-tree left" src="/images/banana-tree-left.png" width="785" height="1007" alt="" aria-hidden="true" />
+              <img className="rsvp-garland" src="/images/floral-garland.png" width="1195" height="505" alt="" aria-hidden="true" />
+              <img className="garland-tree right" src="/images/banana-tree-right.png" width="805" height="1075" alt="" aria-hidden="true" />
+            </div>
             <div className="rsvp-copy">
               <p className="eyebrow">A seat saved for you</p>
               <h2>Will you <em>be joining us?</em></h2>
@@ -208,9 +203,7 @@ export default function App() {
               <div className="signature">With love,<br />{coupleNames('full')}</div>
             </div>
             <div className="form-wrap">
-              <img className="banana-tree left" src="/images/banana-tree-left.png" width="785" height="1007" alt="" aria-hidden="true" />
-              <img className="banana-tree right" src="/images/banana-tree-right.png" width="805" height="1075" alt="" aria-hidden="true" />
-            <div className="form-card">
+              <div className="form-card">
               <Kolam className="card-kolam" />
               {status === 'done' ? (
                 <div className="success" role="status">
@@ -261,10 +254,6 @@ export default function App() {
                       </div>
                       <p className="stepper-total" aria-live="polite">Total attending: {totalAttending}</p>
                       <MealPicker name="meal-0" legend="Your meal preference" value={primaryMeal} onChange={setPrimaryMeal} />
-                      <p className="stepper-hint">This is your meal preference. We are not collecting meals for the guests coming with you.</p>
-                      <label>Your dietary requirements <span className="optional">(optional)</span>
-                        <textarea name="dietary" rows="2" maxLength={500} placeholder="Allergies, or anything the kitchen should know" value={dietary} onChange={(event) => setDietary(event.target.value)} />
-                      </label>
                     </>
                   )}
                   <label>A note for the couple <span className="optional">(optional)</span>
