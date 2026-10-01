@@ -1,6 +1,6 @@
 # Pradeep & Anusha · Wedding RSVP
 
-A responsive React wedding invitation with a traditional South Indian palette, a short opening animation, and an RSVP form for attendance, additional guests, the primary guest’s meal, dietary notes, and a personal message. Built with Vite and React. Ready for Vercel, with a serverless RSVP API, optional Supabase storage, and optional Resend email notifications.
+A responsive React wedding invitation with a traditional South Indian palette, a short opening animation, and an RSVP form for attendance, additional guests, the primary guest’s meal, dietary notes, and a personal message. Built with Vite and React. Ready for Vercel, with a serverless RSVP API, optional Supabase storage, and optional Gmail notifications.
 
 Names are shown as **groom & bride** everywhere.
 
@@ -61,22 +61,22 @@ No database variables means an explicitly labeled preview: nothing is saved and 
 
 ## Email notifications
 
-After a response is saved, the API emails you through [Resend](https://resend.com). The message includes the primary guest’s name and email, attendance, the number of additional guests, the total attending, the primary guest’s meal preference, dietary notes, the personal message, and the submission time with the time zone named (from `timezone` in `src/config.js`). It does not list names or meals for additional guests.
+After a response is saved, the API emails you through Gmail. The message includes the primary guest’s name and email, attendance, the number of additional guests, the total attending, the primary guest’s meal preference, dietary notes, the personal message, and the submission time with the time zone named (from `timezone` in `src/config.js`). It does not list names or meals for additional guests.
 
 Notifications are sent for both accepted and declined invitations. Opening the RSVP section does not send email. Only a completed submission does.
 
 ### Configure the sender
 
-1. Create a Resend account and an API key.
-2. Verify the domain you will send from: Resend → Domains → add the domain and the DNS records Resend shows you. An unverified sender will not deliver.
+1. On the Google account that will send the mail, turn on 2-Step Verification.
+2. Create an App Password: Google Account → Security → App passwords. Use that 16-character password, not the normal Gmail password.
 3. Set these Vercel environment variables (see `.env.example`):
-   - `RESEND_API_KEY`
-   - `RSVP_FROM_EMAIL` — an address on the verified domain, for example `Wedding RSVP <rsvp@yourdomain.com>`
-   - `RSVP_NOTIFY_EMAIL` — the inbox that should receive each RSVP
+   - `GMAIL_USER` — the Google account that sends
+   - `GMAIL_APP_PASSWORD` — the app password for that account
+   - `RSVP_NOTIFY_EMAIL` — the inbox that should receive each RSVP. This can be a different address from `GMAIL_USER`.
    - `NOTIFY_RETRY_SECRET` — a long random string, used only to retry failed notifications
 4. Redeploy after changing environment variables.
 
-Until all three email values are set, RSVPs can still be saved, and the guest is told their response was saved. The site does **not** tell them an email was sent. The row’s `notification_status` is `unconfigured`.
+Until `GMAIL_USER`, `GMAIL_APP_PASSWORD`, and `RSVP_NOTIFY_EMAIL` are all set, RSVPs can still be saved, and the guest is told their response was saved. The site does **not** tell them an email was sent. The row’s `notification_status` is `unconfigured`.
 
 These values stay on the server. They are not referenced from `src/`.
 
@@ -102,7 +102,7 @@ curl -sS -X POST "https://YOUR-DOMAIN/api/notify" \
   -d '{"email":"guest@example.com"}'
 ```
 
-You can send `{"id":"<uuid>"}` instead of an email. A row already marked `sent` returns `alreadySent: true` and is not emailed again. Retries use the RSVP id as a Resend idempotency key, so a repeat during Resend’s idempotency window does not create a second message. A `sending` status older than two minutes can be claimed again.
+You can send `{"id":"<uuid>"}` instead of an email. A row already marked `sent` returns `alreadySent: true` and is not emailed again. A `sending` status older than two minutes can be claimed again.
 
 `/api/notify` does nothing unless `NOTIFY_RETRY_SECRET` is set, and it never inserts a new RSVP.
 
@@ -110,7 +110,7 @@ You can send `{"id":"<uuid>"}` instead of an email. A row already marked `sent` 
 
 1. Push this project to your Git provider and import it into Vercel.
 2. Select the **Vite** framework preset. Build command: `npm run build`. Output directory: `dist`.
-3. Add the Supabase variables, and the Resend variables when you are ready to send mail.
+3. Add the Supabase variables, and the Gmail variables when you are ready to send mail.
 4. Deploy. Vercel serves `api/rsvp.js` at `/api/rsvp` and `api/notify.js` at `/api/notify`.
 
 You can deploy without Supabase to review the design. Those responses are previews and are not saved. This project has not been deployed for you.
@@ -120,7 +120,7 @@ You can deploy without Supabase to review the design. Those responses are previe
 | Feature | Until you set |
 | --- | --- |
 | Saving RSVPs | `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` |
-| Emailing you each RSVP | `RESEND_API_KEY`, `RSVP_FROM_EMAIL` (verified domain), and `RSVP_NOTIFY_EMAIL` |
+| Emailing you each RSVP | `GMAIL_USER`, `GMAIL_APP_PASSWORD`, and `RSVP_NOTIFY_EMAIL` |
 | Retrying a failed email | `NOTIFY_RETRY_SECRET`, plus the email variables above |
 
 Local `npm run dev` is always a preview, even if a `.env` file exists, because the API is not running.

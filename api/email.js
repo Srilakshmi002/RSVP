@@ -1,15 +1,34 @@
+import nodemailer from 'nodemailer';
 import { coupleNames, wedding } from '../src/config.js';
 
 export function emailConfig() {
-  const apiKey = process.env.RESEND_API_KEY || '';
-  const from = process.env.RSVP_FROM_EMAIL || '';
-  const to = process.env.RSVP_NOTIFY_EMAIL || '';
+  const user = (process.env.GMAIL_USER || '').trim();
+  const password = (process.env.GMAIL_APP_PASSWORD || '').replace(/\s/g, '');
+  const to = (process.env.RSVP_NOTIFY_EMAIL || '').trim();
   return {
-    apiKey,
-    from,
+    user,
+    password,
     to,
-    configured: Boolean(apiKey && from && to),
+    configured: Boolean(user && password && to),
   };
+}
+
+function gmailTransport(config) {
+  return nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: { user: config.user, pass: config.password },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
+  });
+}
+
+let transportFor = gmailTransport;
+
+export function useMailTransport(factory) {
+  transportFor = typeof factory === 'function' ? factory : gmailTransport;
 }
 
 export function formatSubmittedAt(iso, timeZone = wedding.timezone) {
@@ -80,27 +99,18 @@ export async function sendRsvpEmail(rsvp) {
   const config = emailConfig();
   if (!config.configured) return { ok: false, reason: 'unconfigured', error: 'Email service is not configured.' };
   const message = buildRsvpEmail(rsvp);
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${config.apiKey}`,
-      'Content-Type': 'application/json',
-      'Idempotency-Key': `rsvp-${rsvp.id}`,
-    },
-    body: JSON.stringify({
-      from: config.from,
-      to: [config.to],
+  try {
+    const transport = transportFor(config);
+    const result = await transport.sendMail({
+      from: config.user,
+      to: config.to,
       subject: message.subject,
       text: message.text,
       html: message.html,
-    }),
-    signal: AbortSignal.timeout(10000),
-  });
-  let payload = null;
-  try { payload = await response.json(); } catch { payload = null; }
-  if (!response.ok) {
-    const detail = payload && typeof payload.message === 'string' ? payload.message : '';
-    return { ok: false, reason: 'failed', error: (detail || `Email provider returned ${response.status}`).replace(/\s+/g, ' ').slice(0, 300) };
+    });
+    return { ok: true, id: result?.messageId || '' };
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'Email delivery failed.';
+    return { ok: false, reason: 'failed', error: detail.replace(/\s+/g, ' ').slice(0, 300) };
   }
-  return { ok: true, id: payload?.id || '' };
 }

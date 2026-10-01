@@ -2,11 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import handler, { validateRsvp } from '../api/rsvp.js';
 import notify from '../api/notify.js';
-import { buildRsvpEmail, formatSubmittedAt } from '../api/email.js';
+import { buildRsvpEmail, formatSubmittedAt, useMailTransport } from '../api/email.js';
 import { MEAL_OPTIONS } from '../shared/meals.js';
 import { wedding } from '../src/config.js';
 
-const ENV_KEYS = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'RESEND_API_KEY', 'RSVP_FROM_EMAIL', 'RSVP_NOTIFY_EMAIL', 'NOTIFY_RETRY_SECRET'];
+const ENV_KEYS = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'GMAIL_USER', 'GMAIL_APP_PASSWORD', 'RSVP_NOTIFY_EMAIL', 'NOTIFY_RETRY_SECRET'];
 const RSVP_ID = '11111111-1111-4111-8111-111111111111';
 
 const valid = (additionalGuests = 0) => ({
@@ -54,10 +54,20 @@ function useSupabase() {
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-key';
 }
 
-function useEmail() {
-  process.env.RESEND_API_KEY = 're_test_key';
-  process.env.RSVP_FROM_EMAIL = 'Wedding RSVP <rsvp@example.com>';
+const sentMail = [];
+
+function useEmail({ fail } = {}) {
+  process.env.GMAIL_USER = 'sender@gmail.com';
+  process.env.GMAIL_APP_PASSWORD = 'app-password';
   process.env.RSVP_NOTIFY_EMAIL = 'couple@example.com';
+  sentMail.length = 0;
+  useMailTransport(() => ({
+    sendMail: async (payload) => {
+      sentMail.push(payload);
+      if (fail) throw new Error(fail);
+      return { messageId: 'email_123' };
+    },
+  }));
 }
 
 function filterMatches(stored, url) {
@@ -69,7 +79,7 @@ function filterMatches(stored, url) {
   return true;
 }
 
-function mockBackend({ insertStatus = 201, resendStatus = 200, resendBody = { id: 'email_123' }, row = null } = {}) {
+function mockBackend({ insertStatus = 201, row = null } = {}) {
   const calls = [];
   let stored = row ? { ...row } : null;
   globalThis.fetch = async (url, options = {}) => {
@@ -77,7 +87,6 @@ function mockBackend({ insertStatus = 201, resendStatus = 200, resendBody = { id
     const target = String(url);
     const parsed = options.body ? JSON.parse(options.body) : null;
     calls.push({ url: target, method, body: parsed, headers: options.headers || {} });
-    if (target.includes('api.resend.com')) return http(resendStatus, resendBody);
     if (target.includes('/rest/v1/rsvps') && method === 'POST') {
       if (insertStatus === 409) return http(409, { message: 'duplicate' });
       if (insertStatus >= 400) return http(insertStatus, { message: 'db error' });
@@ -182,22 +191,22 @@ test('preview, partial configuration, success, failure, and duplicates', async (
     assert.deepEqual(insert.body.guests, [{ name: 'Guest One', meal: 'Veg' }]);
     assert.equal(insert.body.dietary, 'No nuts');
     assert.equal(insert.headers.Authorization, 'Bearer test-key');
-    const email = success.calls.find((call) => call.url.includes('api.resend.com'));
-    assert.equal(email.headers.Authorization, 'Bearer re_test_key');
-    assert.equal(email.headers['Idempotency-Key'], `rsvp-${RSVP_ID}`);
-    assert.equal(email.body.to[0], 'couple@example.com');
-    assert.equal(email.body.from, 'Wedding RSVP <rsvp@example.com>');
+    assert.equal(sentMail.length, 1);
+    const email = sentMail[0];
+    assert.equal(email.to, 'couple@example.com');
+    assert.equal(email.from, 'sender@gmail.com');
     const stamp = formatSubmittedAt('2026-10-01T15:30:00.000Z', wedding.timezone);
     for (const field of ['Primary guest: Guest One', 'Email: guest@example.com', 'Attendance: Attending', 'Additional guests: 0', 'Total attending: 1', "Primary guest's meal preference: Veg", 'Dietary requirements: No nuts', 'Personal message: Congratulations', `Submitted: ${stamp}`, `${wedding.groomFirst} ${wedding.groomLast} & ${wedding.brideFirst} ${wedding.brideLast}`]) {
-      assert.ok(email.body.text.includes(field), field);
+      assert.ok(email.text.includes(field), field);
     }
-    assert.equal(email.body.html.includes('<script>'), false);
+    assert.equal(email.html.includes('<script>'), false);
     assert.equal(success.calls.some((call) => call.method === 'DELETE'), false);
     assert.equal(success.read().notification_status, 'sent');
     assert.equal(success.read().notification_id, 'email_123');
-    assert.equal(JSON.stringify(response.body).includes('re_test_key'), false);
+    assert.equal(JSON.stringify(response.body).includes('app-password'), false);
 
-    const failed = mockBackend({ resendStatus: 422, resendBody: { message: 'Invalid <from> address' } });
+    useEmail({ fail: 'Invalid login' });
+    const failed = mockBackend();
     response = res();
     await handler({ method: 'POST', headers: {}, body: valid() }, response);
     assert.equal(response.code, 201);
@@ -209,12 +218,13 @@ test('preview, partial configuration, success, failure, and duplicates', async (
     assert.equal(failed.calls.filter((call) => call.method === 'POST' && call.url.includes('/rest/v1/rsvps')).length, 1);
     assert.equal(failed.calls.some((call) => call.method === 'DELETE'), false);
 
-    delete process.env.RESEND_API_KEY;
+    sentMail.length = 0;
+    delete process.env.GMAIL_APP_PASSWORD;
     const unconfigured = mockBackend();
     response = res();
     await handler({ method: 'POST', headers: {}, body: valid() }, response);
     assert.deepEqual(response.body, { saved: true, notified: false, notification: 'unconfigured' });
-    assert.equal(unconfigured.calls.some((call) => call.url.includes('api.resend.com')), false);
+    assert.equal(sentMail.length, 0);
     assert.equal(unconfigured.read().notification_status, 'unconfigured');
 
     useEmail();
@@ -222,7 +232,7 @@ test('preview, partial configuration, success, failure, and duplicates', async (
     response = res();
     await handler({ method: 'POST', headers: {}, body: valid() }, response);
     assert.equal(response.code, 409);
-    assert.equal(duplicate.calls.some((call) => call.url.includes('api.resend.com')), false);
+    assert.equal(sentMail.length, 0);
 
     globalThis.fetch = async () => { throw new Error('offline'); };
     response = res();
@@ -231,6 +241,7 @@ test('preview, partial configuration, success, failure, and duplicates', async (
     assert.equal(response.body.saved, undefined);
   } finally {
     globalThis.fetch = originalFetch;
+    useMailTransport();
     restoreEnv(savedEnv);
   }
 });
@@ -246,12 +257,13 @@ test('decline emails report nobody attending and do not require a meal', async (
     const response = res();
     await handler({ method: 'POST', headers: {}, body: { ...valid(3), attendance: 'no', meal: 'Both', dietary: '', message: 'We will miss it' } }, response);
     assert.equal(response.body.notified, true);
-    const email = backend.calls.find((call) => call.url.includes('api.resend.com'));
-    assert.match(email.body.text, /Attendance: Declined/);
-    assert.match(email.body.text, /Additional guests: 0/);
-    assert.match(email.body.text, /Total attending: 0/);
-    assert.match(email.body.text, /Primary guest's meal preference: None/);
-    assert.match(email.body.text, /Personal message: We will miss it/);
+    assert.equal(sentMail.length, 1);
+    const email = sentMail[0];
+    assert.match(email.text, /Attendance: Declined/);
+    assert.match(email.text, /Additional guests: 0/);
+    assert.match(email.text, /Total attending: 0/);
+    assert.match(email.text, /Primary guest's meal preference: None/);
+    assert.match(email.text, /Personal message: We will miss it/);
     const insert = backend.calls.find((call) => call.method === 'POST' && call.url.includes('/rest/v1/rsvps'));
     assert.equal(insert.body.additional_guests, 0);
     assert.equal(insert.body.total_attending, 0);
@@ -259,6 +271,7 @@ test('decline emails report nobody attending and do not require a meal', async (
     assert.equal(insert.body.guests.length, 0);
   } finally {
     globalThis.fetch = originalFetch;
+    useMailTransport();
     restoreEnv(savedEnv);
   }
 });
@@ -279,13 +292,15 @@ test('more than four additional guests are stored without companion details', as
     assert.equal(insert.body.total_attending, 7);
     assert.equal(insert.body.meal, 'Both');
     assert.deepEqual(insert.body.guests, [{ name: 'Guest One', meal: 'Both' }]);
-    const email = backend.calls.find((call) => call.url.includes('api.resend.com'));
-    assert.match(email.body.text, /Additional guests: 6/);
-    assert.match(email.body.text, /Total attending: 7/);
-    assert.match(email.body.text, /Primary guest's meal preference: Both/);
-    assert.equal(email.body.text.includes('Guest Two'), false);
+    assert.equal(sentMail.length, 1);
+    const email = sentMail[0];
+    assert.match(email.text, /Additional guests: 6/);
+    assert.match(email.text, /Total attending: 7/);
+    assert.match(email.text, /Primary guest's meal preference: Both/);
+    assert.equal(email.text.includes('Guest Two'), false);
   } finally {
     globalThis.fetch = originalFetch;
+    useMailTransport();
     restoreEnv(savedEnv);
   }
 });
@@ -353,10 +368,11 @@ test('retry authorization, missing guests, failed delivery, and duplicates', asy
         notification_status: 'sent',
       },
     });
+    sentMail.length = 0;
     response = res();
     await notify({ method: 'POST', headers: { 'x-notify-secret': 'retry-secret' }, body: { id: RSVP_ID } }, response);
     assert.deepEqual(response.body, { saved: true, notified: true, alreadySent: true, notification: 'sent' });
-    assert.equal(sent.calls.some((call) => call.url.includes('api.resend.com')), false);
+    assert.equal(sentMail.length, 0);
     assert.equal(sent.calls.some((call) => call.method === 'POST'), false);
 
     useEmail();
@@ -381,15 +397,17 @@ test('retry authorization, missing guests, failed delivery, and duplicates', asy
     await notify({ method: 'POST', headers: { 'x-notify-secret': 'retry-secret' }, body: { email: 'guest@example.com' } }, response);
     assert.equal(response.body.notified, true);
     assert.equal(response.body.alreadySent, false);
-    assert.equal(failed.calls.filter((call) => call.url.includes('api.resend.com')).length, 1);
+    assert.equal(sentMail.length, 1);
+    assert.equal(sentMail[0].to, 'couple@example.com');
     assert.equal(failed.calls.some((call) => call.method === 'POST' && call.url.endsWith('/rest/v1/rsvps')), false);
     assert.equal(failed.read().notification_status, 'sent');
 
     response = res();
     await notify({ method: 'POST', headers: { 'x-notify-secret': 'retry-secret' }, body: { email: 'guest@example.com' } }, response);
     assert.equal(response.body.alreadySent, true);
-    assert.equal(failed.calls.filter((call) => call.url.includes('api.resend.com')).length, 1);
+    assert.equal(sentMail.length, 1);
 
+    sentMail.length = 0;
     delete process.env.RSVP_NOTIFY_EMAIL;
     const pending = mockBackend({
       row: {
@@ -411,10 +429,11 @@ test('retry authorization, missing guests, failed delivery, and duplicates', asy
     await notify({ method: 'POST', headers: { 'x-notify-secret': 'retry-secret' }, body: { email: 'guest@example.com' } }, response);
     assert.equal(response.body.notified, false);
     assert.equal(response.body.notification, 'unconfigured');
-    assert.equal(pending.calls.some((call) => call.url.includes('api.resend.com')), false);
+    assert.equal(sentMail.length, 0);
     assert.equal(pending.read().notification_status, 'unconfigured');
   } finally {
     globalThis.fetch = originalFetch;
+    useMailTransport();
     restoreEnv(savedEnv);
   }
 });
