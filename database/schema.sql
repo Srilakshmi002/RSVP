@@ -1,7 +1,9 @@
 -- Fresh Supabase setup. Guest data is accessible only from the server.
 -- The person completing the form is the primary guest. additional_guests is everyone
 -- coming with them. total_attending is 0 when they decline, otherwise additional_guests + 1.
--- Meal values must be exactly: Veg, Non Veg, Both. There is no party-size limit.
+-- Wedding replies do not collect a meal. Reception meals are Vegetarian,
+-- Non-vegetarian, or Both. Older rows may still say Veg, Non Veg, or Both.
+-- event is wedding or reception. The same email may reply once for each event.
 -- The guests column stores only the primary guest for new RSVPs. It is kept so older
 -- rows can retain names that were collected before this change.
 
@@ -21,7 +23,7 @@ as $$
         or guest->>'name' is null
         or char_length(btrim(guest->>'name')) < 1
         or char_length(guest->>'name') > 120
-        or guest->>'meal' not in ('Veg', 'Non Veg', 'Both')
+        or coalesce(guest->>'meal', '') not in ('', 'Veg', 'Non Veg', 'Both', 'Vegetarian', 'Non-vegetarian')
     )
   end;
 $$;
@@ -32,9 +34,10 @@ create table if not exists public.rsvps (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
   name text not null check (char_length(name) between 1 and 120),
-  email text not null unique check (char_length(email) <= 254),
+  email text not null check (char_length(email) <= 254),
+  event text not null default 'wedding' check (event in ('wedding', 'reception')),
   attendance text not null check (attendance in ('yes', 'no')),
-  meal text not null default '' check (meal = '' or meal in ('Veg', 'Non Veg', 'Both')),
+  meal text not null default '' check (meal = '' or meal in ('Veg', 'Non Veg', 'Both', 'Vegetarian', 'Non-vegetarian')),
   additional_guests integer not null default 0 check (additional_guests >= 0),
   total_attending integer not null default 0 check (total_attending >= 0),
   guests jsonb not null default '[]'::jsonb,
@@ -49,13 +52,18 @@ create table if not exists public.rsvps (
   constraint rsvps_party_valid check (
     (attendance = 'no' and additional_guests = 0 and total_attending = 0 and meal = '')
     or
-    (attendance = 'yes' and meal in ('Veg', 'Non Veg', 'Both') and total_attending = additional_guests + 1)
+    (attendance = 'yes' and event = 'wedding' and total_attending = additional_guests + 1 and (meal = '' or meal in ('Veg', 'Non Veg', 'Both')))
+    or
+    (attendance = 'yes' and event = 'reception' and meal in ('Vegetarian', 'Non-vegetarian', 'Both') and total_attending = additional_guests + 1)
   )
 );
+
+create unique index if not exists rsvps_email_event_idx on public.rsvps (email, event);
 
 create index if not exists rsvps_notification_status_idx on public.rsvps (notification_status);
 
 alter table public.rsvps enable row level security;
 revoke all on table public.rsvps from anon, authenticated;
+grant select, insert, update, delete on table public.rsvps to service_role;
 -- No public policies. View or export RSVPs from the Supabase dashboard.
--- The API uses the service role key, which bypasses row-level security.
+-- The API uses the secret key, which acts as service_role and bypasses row-level security.

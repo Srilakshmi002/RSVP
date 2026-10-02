@@ -67,14 +67,20 @@ export function emailFields(rsvp, submittedAt) {
   const attending = rsvp.attendance === 'yes';
   const additional = attending && Number.isInteger(rsvp.additional_guests) ? rsvp.additional_guests : 0;
   const total = attending && Number.isInteger(rsvp.total_attending) ? rsvp.total_attending : 0;
-  const meal = attending && typeof rsvp.meal === 'string' && rsvp.meal.trim() ? rsvp.meal.trim() : 'None';
+  const eventLabel = rsvp.event === 'reception' ? 'Reception' : 'Wedding';
+  const meal = !attending
+    ? 'None'
+    : rsvp.event === 'wedding'
+      ? 'Vegetarian meal served'
+      : (typeof rsvp.meal === 'string' && rsvp.meal.trim() ? rsvp.meal.trim() : 'None');
   return [
+    ['Event', eventLabel],
     ['Primary guest', rsvp.name || ''],
     ['Email', rsvp.email || ''],
     ['Attendance', attending ? 'Attending' : 'Declined'],
     ['Additional guests', String(additional)],
     ['Total attending', String(total)],
-    ["Primary guest's meal preference", meal],
+    ['Meal', meal],
     ['Dietary requirements', rsvp.dietary?.trim() || 'None provided'],
     ['Personal message', rsvp.message?.trim() || 'None provided'],
     ['Submitted', submittedAt],
@@ -86,12 +92,13 @@ export function buildRsvpEmail(rsvp, timeZone = wedding.timezone) {
   const fields = emailFields(rsvp, submittedAt);
   const attending = rsvp.attendance === 'yes';
   const names = coupleNames('full');
-  const subject = `RSVP for ${coupleNames()}: ${rsvp.name} (${attending ? 'Attending' : 'Declined'})`;
-  const text = [`New RSVP for ${names}`, '', ...fields.map(([label, value]) => `${label}: ${value}`)].join('\n');
+  const eventLabel = rsvp.event === 'reception' ? 'Reception' : 'Wedding';
+  const subject = `${eventLabel} RSVP for ${coupleNames()}: ${rsvp.name} (${attending ? 'Attending' : 'Declined'})`;
+  const text = [`New ${eventLabel} RSVP for ${names}`, '', ...fields.map(([label, value]) => `${label}: ${value}`)].join('\n');
   const rows = fields.map(([label, value]) => (
     `<tr><th align="left" style="padding:8px 12px 8px 0;vertical-align:top;color:#6e1e2c;">${escapeHtml(label)}</th><td style="padding:8px 0;vertical-align:top;">${escapeHtml(value).replace(/\n/g, '<br>')}</td></tr>`
   )).join('');
-  const html = `<div style="font-family:Georgia,serif;color:#2c1814;"><p style="margin:0 0 12px;">New RSVP for ${escapeHtml(names)}</p><table style="border-collapse:collapse;">${rows}</table></div>`;
+  const html = `<div style="font-family:Georgia,serif;color:#2c1814;"><p style="margin:0 0 12px;">New ${escapeHtml(eventLabel)} RSVP for ${escapeHtml(names)}</p><table style="border-collapse:collapse;">${rows}</table></div>`;
   return { subject, text, html };
 }
 

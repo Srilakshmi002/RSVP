@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, ArrowUpRight, Check, Heart, MapPin, Menu, X } from 'lucide-react';
-import { MEAL_OPTIONS } from '../shared/meals.js';
+import { RECEPTION_MEAL_OPTIONS } from '../shared/meals.js';
 import { coupleNames, venueMapsUrl, wedding as w } from './config';
 import CoupleFilm from './CoupleFilm';
 import { BrassLamp, Kolam, SilkBorder } from './decor';
@@ -14,12 +14,12 @@ function MapsLink() {
   );
 }
 
-function MealPicker({ name, legend, value, onChange }) {
+function MealPicker({ name, legend, value, onChange, options }) {
   return (
     <fieldset className="meal-picker">
       <legend>{legend} <b>*</b></legend>
       <div className="meal-options">
-        {MEAL_OPTIONS.map((meal) => (
+        {options.map((meal) => (
           <label key={meal} className={value === meal ? 'selected' : ''}>
             <input type="radio" name={name} value={meal} checked={value === meal} onChange={() => onChange(meal)} required />
             {meal}
@@ -30,9 +30,9 @@ function MealPicker({ name, legend, value, onChange }) {
   );
 }
 
-export default function App() {
-  const [showIntro, setShowIntro] = useState(true);
-  const [menu, setMenu] = useState(false);
+function RsvpForm({ event }) {
+  const reception = event === 'reception';
+  const title = reception ? 'Reception RSVP' : 'Wedding RSVP';
   const [attendance, setAttendance] = useState('yes');
   const [additionalGuests, setAdditionalGuests] = useState(0);
   const [primaryMeal, setPrimaryMeal] = useState('');
@@ -43,25 +43,8 @@ export default function App() {
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
   const sending = useRef(false);
-  const headingRef = useRef(null);
   const successRef = useRef(null);
   const errorRef = useRef(null);
-  const introWasOpen = useRef(true);
-
-  useEffect(() => {
-    document.title = `${coupleNames('full')} — Our Wedding`;
-  }, []);
-
-  useEffect(() => {
-    if (!showIntro) return undefined;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = previous; };
-  }, [showIntro]);
-
-  useEffect(() => {
-    if (introWasOpen.current && !showIntro) headingRef.current?.focus({ preventScroll: true });
-  }, [showIntro]);
 
   useEffect(() => {
     if (status === 'done') successRef.current?.focus();
@@ -71,18 +54,11 @@ export default function App() {
     if (error) errorRef.current?.focus();
   }, [error]);
 
-  useEffect(() => {
-    if (!menu) return undefined;
-    const onKey = (event) => { if (event.key === 'Escape') setMenu(false); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [menu]);
-
-  async function submit(event) {
-    event.preventDefault();
+  async function submit(formEvent) {
+    formEvent.preventDefault();
     if (sending.current) return;
     const attending = attendance === 'yes';
-    if (attending && !MEAL_OPTIONS.includes(primaryMeal)) {
+    if (reception && attending && !RECEPTION_MEAL_OPTIONS.includes(primaryMeal)) {
       setError('Please choose your meal preference.');
       setStatus('idle');
       return;
@@ -93,8 +69,9 @@ export default function App() {
     const payload = {
       name: fullName.trim(),
       email: email.trim(),
+      event,
       attendance,
-      meal: attending ? primaryMeal : '',
+      meal: reception && attending ? primaryMeal : '',
       additionalGuests: attending ? additionalGuests : 0,
       dietary: '',
       message: note.trim(),
@@ -131,6 +108,131 @@ export default function App() {
   }
 
   const totalAttending = 1 + additionalGuests;
+  const eventName = reception ? 'reception' : 'wedding';
+  const confirmation = result?.attendance === 'yes'
+    ? `We’ll see you at the ${eventName}.`
+    : 'You’ll be there in spirit.';
+
+  return (
+    <div className="form-card">
+      <Kolam className="card-kolam" />
+      {status === 'done' ? (
+        <div className="success" role="status">
+          <span className="success-icon"><Check aria-hidden="true" /></span>
+          <p className="eyebrow">{result.preview ? 'Preview only' : title}</p>
+          <h3 ref={successRef} tabIndex={-1}>
+            {result.preview ? 'This response was not saved.' : confirmation}
+          </h3>
+          <p>
+            {result.preview
+              ? 'This is a preview. Your response has not been saved, and no email was sent.'
+              : result.attendance === 'yes'
+                ? `Thank you for celebrating with us. We’ve saved your ${eventName} response and can’t wait to see you.`
+                : `Thank you for letting us know. We’ve saved your ${eventName} response.`}
+          </p>
+          {result.saved && result.notified && <p>The couple has been notified.</p>}
+          <button className="button" type="button" onClick={() => { setStatus('idle'); setResult(null); }}>Back to the form <ArrowRight size={16} aria-hidden="true" /></button>
+        </div>
+      ) : (
+        <form onSubmit={submit} aria-busy={status === 'sending'}>
+          <div className="form-heading"><h3>{title}</h3><span>{coupleNames()}</span></div>
+          <label>Your full name <b>*</b>
+            <input name="name" autoComplete="name" placeholder="First and last name" maxLength={120} required value={fullName} onChange={(formEvent) => setFullName(formEvent.target.value)} />
+          </label>
+          <label>Email address <b>*</b>
+            <input name="email" type="email" autoComplete="email" placeholder="you@example.com" maxLength={254} required value={email} onChange={(formEvent) => setEmail(formEvent.target.value)} />
+          </label>
+          <fieldset>
+            <legend>Will you be attending? <b>*</b></legend>
+            <div className="attendance">
+              {[['yes', 'Joyfully accept'], ['no', 'Regretfully decline']].map(([value, text]) => (
+                <label className={attendance === value ? 'selected' : ''} key={value}>
+                  <input type="radio" name={`attendance-${event}`} value={value} checked={attendance === value} onChange={() => setAttendance(value)} />
+                  {text}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          {attendance === 'yes' && (
+            <>
+              <div className="stepper" role="group" aria-labelledby={`${event}-guest-count-label`}>
+                <p id={`${event}-guest-count-label`}>Additional guests coming with you</p>
+                <div className="stepper-controls">
+                  <button type="button" aria-label="Decrease additional guests" disabled={additionalGuests <= 0} onClick={() => setAdditionalGuests((value) => Math.max(0, value - 1))}>−</button>
+                  <span className="stepper-value">{additionalGuests}<span className="visually-hidden"> additional guests</span></span>
+                  <button type="button" aria-label="Increase additional guests" onClick={() => setAdditionalGuests((value) => value + 1)}>+</button>
+                </div>
+              </div>
+              <p className="stepper-total" aria-live="polite">Total attending: {totalAttending}</p>
+              {reception ? (
+                <MealPicker name={`meal-${event}`} legend="Your meal preference" value={primaryMeal} onChange={setPrimaryMeal} options={RECEPTION_MEAL_OPTIONS} />
+              ) : (
+                <p className="meal-note">A vegetarian meal will be served at the wedding.</p>
+              )}
+            </>
+          )}
+          <label>A note for the couple <span className="optional">(optional)</span>
+            <textarea name="message" rows="3" maxLength={2000} placeholder="Share a wish, a memory, or a song request" value={note} onChange={(formEvent) => setNote(formEvent.target.value)} />
+          </label>
+          {error && <p className="error" role="alert" tabIndex={-1} ref={errorRef}>{error}</p>}
+          <p className="visually-hidden" aria-live="polite">{status === 'sending' ? 'Sending your response' : ''}</p>
+          <button className="button submit" type="submit" disabled={status === 'sending'}>
+            {status === 'sending' ? 'Sending your response…' : 'Send my RSVP'}
+            <ArrowRight size={17} aria-hidden="true" />
+          </button>
+          <p className="form-foot"><Heart size={12} aria-hidden="true" /> With happy hearts, we look forward to celebrating.</p>
+        </form>
+      )}
+    </div>
+  );
+}
+
+export default function App() {
+  const [showIntro, setShowIntro] = useState(true);
+  const [menu, setMenu] = useState(false);
+  const headingRef = useRef(null);
+  const introWasOpen = useRef(true);
+
+  useEffect(() => {
+    document.title = `${coupleNames('full')} — Our Wedding`;
+  }, []);
+
+  useEffect(() => {
+    if (!showIntro) return undefined;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previous; };
+  }, [showIntro]);
+
+  useEffect(() => {
+    if (introWasOpen.current && !showIntro) headingRef.current?.focus({ preventScroll: true });
+  }, [showIntro]);
+
+  useEffect(() => {
+    if (showIntro || window.location.hash !== '#celebration') return undefined;
+    const section = document.getElementById('celebration');
+    if (!section) return undefined;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    section.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+    return undefined;
+  }, [showIntro]);
+
+  useEffect(() => {
+    if (!menu) return undefined;
+    const onKey = (event) => { if (event.key === 'Escape') setMenu(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [menu]);
+
+  function goToEvents(event) {
+    setMenu(false);
+    const section = document.getElementById('celebration');
+    if (!section) return;
+    event.preventDefault();
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (window.location.hash !== '#celebration') history.pushState(null, '', '#celebration');
+    section.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+  }
 
   return (
     <>
@@ -150,7 +252,7 @@ export default function App() {
             {[['The celebration', '#celebration'], ['The details', '#details']].map(([label, href]) => (
               <a key={href} href={href} onClick={() => setMenu(false)}>{label}</a>
             ))}
-            <a className="nav-rsvp" href="#rsvp" onClick={() => setMenu(false)}>Kindly RSVP <ArrowUpRight size={15} aria-hidden="true" /></a>
+            <a className="nav-rsvp" href="/#celebration" onClick={goToEvents}>Kindly RSVP <ArrowUpRight size={15} aria-hidden="true" /></a>
           </nav>
           </div>
         </header>
@@ -164,7 +266,7 @@ export default function App() {
                 <span className="person">{w.brideFirst} <span className="surname">{w.brideLast}</span></span>
               </h1>
               <p className="hero-sub">We would be honoured to celebrate our wedding with you.</p>
-              <a className="button" href="#rsvp">Join our celebration <ArrowUpRight size={17} aria-hidden="true" /></a>
+              <a className="button" href="/#celebration" onClick={goToEvents}>Join our celebration <ArrowUpRight size={17} aria-hidden="true" /></a>
               <div className="hero-date"><span>{w.shortDate}</span><i />{w.venue}</div>
             </div>
             <div className="hero-art">
@@ -179,9 +281,11 @@ export default function App() {
             <p className="eyebrow">We’re getting married</p>
             <h2>It wouldn’t be the same <em>without you.</em></h2>
             <p>From the first hello to this next chapter, our story has been filled with love. We can’t wait to celebrate it with you.</p>
+            <div className="event-actions">
+              <a className="button" href="#rsvp">Wedding</a>
+              <a className="button" href="#reception">Reception</a>
+            </div>
             <div className="event-facts">
-              <div><span>Muhurtham</span><h3>{w.date}</h3><p className="muhurtham-time">{w.muhurtham}</p></div>
-              <div><span>Where</span><h3>{w.venue}</h3><p>{w.address}</p><MapsLink /></div>
               <div><span>Attire</span><h3>Festive & traditional</h3><p>{w.attire}</p></div>
             </div>
           </section>
@@ -191,6 +295,7 @@ export default function App() {
               <img className="garland-tree left" src="/images/banana-tree-left.png" width="785" height="1007" alt="" aria-hidden="true" />
               <img className="rsvp-garland" src="/images/floral-garland.png" width="1195" height="505" alt="" aria-hidden="true" />
               <img className="garland-tree right" src="/images/banana-tree-right.png" width="805" height="1075" alt="" aria-hidden="true" />
+              <p className="sumuhurtham">Sumuhurtham October 14, 2026, 7:57AM</p>
             </div>
             <div className="rsvp-copy">
               <p className="eyebrow">A seat saved for you</p>
@@ -203,72 +308,13 @@ export default function App() {
               <div className="signature">With love,<br />{coupleNames('full')}</div>
             </div>
             <div className="form-wrap">
-              <div className="form-card">
-              <Kolam className="card-kolam" />
-              {status === 'done' ? (
-                <div className="success" role="status">
-                  <span className="success-icon"><Check aria-hidden="true" /></span>
-                  <p className="eyebrow">{result.preview ? 'Preview only' : 'RSVP received'}</p>
-                  <h3 ref={successRef} tabIndex={-1}>
-                    {result.preview ? 'This response was not saved.' : result.attendance === 'yes' ? 'We’ll see you there.' : 'You’ll be there in spirit.'}
-                  </h3>
-                  <p>
-                    {result.preview
-                      ? 'This is a preview. Your response has not been saved, and no email was sent.'
-                      : result.attendance === 'yes'
-                        ? 'Thank you for celebrating with us. We’ve saved your response and can’t wait to see you.'
-                        : 'Thank you for letting us know. We’ve saved your response.'}
-                  </p>
-                  {result.saved && result.notified && <p>The couple has been notified.</p>}
-                  <button className="button" type="button" onClick={() => { setStatus('idle'); setResult(null); }}>Back to the form <ArrowRight size={16} aria-hidden="true" /></button>
-                </div>
-              ) : (
-                <form onSubmit={submit} aria-busy={status === 'sending'}>
-                  <div className="form-heading"><h3>Your RSVP</h3><span>{coupleNames()}</span></div>
-                  <label>Your full name <b>*</b>
-                    <input name="name" autoComplete="name" placeholder="First and last name" maxLength={120} required value={fullName} onChange={(event) => setFullName(event.target.value)} />
-                  </label>
-                  <label>Email address <b>*</b>
-                    <input name="email" type="email" autoComplete="email" placeholder="you@example.com" maxLength={254} required value={email} onChange={(event) => setEmail(event.target.value)} />
-                  </label>
-                  <fieldset>
-                    <legend>Will you be attending? <b>*</b></legend>
-                    <div className="attendance">
-                      {[['yes', 'Joyfully accept'], ['no', 'Regretfully decline']].map(([value, text]) => (
-                        <label className={attendance === value ? 'selected' : ''} key={value}>
-                          <input type="radio" name="attendance" value={value} checked={attendance === value} onChange={() => setAttendance(value)} />
-                          {text}
-                        </label>
-                      ))}
-                    </div>
-                  </fieldset>
-                  {attendance === 'yes' && (
-                    <>
-                      <div className="stepper" role="group" aria-labelledby="guest-count-label">
-                        <p id="guest-count-label">Additional guests coming with you</p>
-                        <div className="stepper-controls">
-                          <button type="button" aria-label="Decrease additional guests" disabled={additionalGuests <= 0} onClick={() => setAdditionalGuests((value) => Math.max(0, value - 1))}>−</button>
-                          <span className="stepper-value">{additionalGuests}<span className="visually-hidden"> additional guests</span></span>
-                          <button type="button" aria-label="Increase additional guests" onClick={() => setAdditionalGuests((value) => value + 1)}>+</button>
-                        </div>
-                      </div>
-                      <p className="stepper-total" aria-live="polite">Total attending: {totalAttending}</p>
-                      <MealPicker name="meal-0" legend="Your meal preference" value={primaryMeal} onChange={setPrimaryMeal} />
-                    </>
-                  )}
-                  <label>A note for the couple <span className="optional">(optional)</span>
-                    <textarea name="message" rows="3" maxLength={2000} placeholder="Share a wish, a memory, or a song request" value={note} onChange={(event) => setNote(event.target.value)} />
-                  </label>
-                  {error && <p className="error" role="alert" tabIndex={-1} ref={errorRef}>{error}</p>}
-                  <p className="visually-hidden" aria-live="polite">{status === 'sending' ? 'Sending your response' : ''}</p>
-                  <button className="button submit" type="submit" disabled={status === 'sending'}>
-                    {status === 'sending' ? 'Sending your response…' : 'Send my RSVP'}
-                    <ArrowRight size={17} aria-hidden="true" />
-                  </button>
-                  <p className="form-foot"><Heart size={12} aria-hidden="true" /> With happy hearts, we look forward to celebrating.</p>
-                </form>
-              )}
+              <RsvpForm event="wedding" />
             </div>
+          </section>
+
+          <section className="rsvp-section reception-section" id="reception">
+            <div className="form-wrap">
+              <RsvpForm event="reception" />
             </div>
           </section>
 

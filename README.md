@@ -53,15 +53,15 @@ The person completing the form chooses **Veg**, **Non Veg**, or **Both**. That c
 
 1. Create a Supabase project.
 2. For a new project, run `database/schema.sql` in the SQL editor.
-3. If you already created `public.rsvps` from an earlier schema, run `database/migration-meals-and-notifications.sql` first when that table does not yet have meal checks. Then run `database/migration-additional-guests.sql`. That migration keeps existing rows, including guest names already stored, and adds `meal`, `additional_guests`, and `total_attending`. Attending rows need a primary meal of `Veg`, `Non Veg`, or `Both` before it will finish. A brand-new database only needs `database/schema.sql`.
+3. If you already created `public.rsvps` from an earlier schema, run `database/migration-meals-and-notifications.sql` first when that table does not yet have meal checks. Then run `database/migration-additional-guests.sql`, then `database/migration-wedding-reception.sql`. The last migration keeps existing rows as wedding replies and lets the same email reply once for the wedding and once for the reception. A brand-new database only needs `database/schema.sql`.
 4. In Vercel, set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. Copy the names from `.env.example`. Never expose the service role key in frontend code or give it a `VITE_` prefix.
 5. Redeploy, submit a test RSVP, and confirm the row in the Supabase `rsvps` table before sharing the site.
 
-No database variables means an explicitly labeled preview: nothing is saved and no email is sent. Setting only one of the two variables returns an error. One response is allowed per email address. Guests should contact you to change a response. Row-level security is on, with no public policies. Read and export responses from the Supabase dashboard.
+No database variables means an explicitly labeled preview: nothing is saved and no email is sent. Setting only one of the two variables returns an error. One response is allowed per email address for each event. Guests should contact you to change a response. Row-level security is on, with no public policies. Read and export responses from the Supabase dashboard.
 
 ## Email notifications
 
-After a response is saved, the API emails you through Gmail. The message includes the primary guest’s name and email, attendance, the number of additional guests, the total attending, the primary guest’s meal preference, dietary notes, the personal message, and the submission time with the time zone named (from `timezone` in `src/config.js`). It does not list names or meals for additional guests.
+After a response is saved, the API emails you through Gmail. The message includes the event (wedding or reception), the primary guest’s name and email, attendance, the number of additional guests, the total attending, the meal, dietary notes, the personal message, and the submission time with the time zone named (from `timezone` in `src/config.js`). Wedding replies record that a vegetarian meal is served. It does not list names or meals for additional guests.
 
 Notifications are sent for both accepted and declined invitations. Opening the RSVP section does not send email. Only a completed submission does.
 
