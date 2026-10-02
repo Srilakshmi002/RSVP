@@ -243,7 +243,6 @@ export default function App() {
       <div className="site" inert={showIntro ? true : undefined}>
         <a className="skip-link" href="#rsvp">Skip to RSVP</a>
         <header>
-          <SilkBorder />
           <div className="header-bar">
           <a className="monogram" href="#home" aria-label={`${coupleNames('full')}, back to top`}>
             {w.groomFirst[0]}<span>&</span>{w.brideFirst[0]}
@@ -360,6 +359,7 @@ export default function App() {
         </main>
         <footer>
           <span className="footer-names">{coupleNames('full')}</span>
+          <SilkBorder className="footer-silk" />
         </footer>
       </div>
     </>

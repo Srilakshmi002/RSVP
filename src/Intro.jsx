@@ -47,7 +47,6 @@ export default function Intro({ onClose }) {
   return (
     <div className={className} role="dialog" aria-modal="true" aria-label={`Welcome to the wedding of ${coupleNames()}`}>
       <button ref={skipRef} type="button" className="skip-intro" onClick={requestClose}>Skip intro</button>
-      <SilkBorder className="opening-silk" />
       <BrassLamp className="opening-lamp left" />
       <BrassLamp className="opening-lamp right" />
       <div className="opening-card">
@@ -59,6 +58,7 @@ export default function Intro({ onClose }) {
         <p className="opening-names"><span>{w.groomFirst}</span> <em>&</em> <span>{w.brideFirst}</span></p>
         <p className="opening-date">{w.date}<br />{w.venue}</p>
       </div>
+      <SilkBorder className="opening-silk" />
     </div>
   );
 }
