@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import handler, { validateRsvp } from '../api/rsvp.js';
 import notify from '../api/notify.js';
 import { buildRsvpEmail, formatSubmittedAt, useMailTransport } from '../api/email.js';
-import { MEAL_OPTIONS } from '../shared/meals.js';
+import { RECEPTION_MEAL_OPTIONS } from '../shared/meals.js';
 import { wedding } from '../src/config.js';
 
 const ENV_KEYS = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'GMAIL_USER', 'GMAIL_APP_PASSWORD', 'RSVP_NOTIFY_EMAIL', 'NOTIFY_RETRY_SECRET'];
@@ -12,11 +12,18 @@ const RSVP_ID = '11111111-1111-4111-8111-111111111111';
 const valid = (additionalGuests = 0) => ({
   name: 'Guest One',
   email: 'guest@example.com',
+  event: 'wedding',
   attendance: 'yes',
-  meal: 'Veg',
   additionalGuests,
   dietary: 'No nuts',
   message: 'Congratulations',
+});
+
+const reception = (meal = 'Vegetarian', extra = {}) => ({
+  ...valid(),
+  event: 'reception',
+  meal,
+  ...extra,
 });
 
 function res() {
@@ -110,15 +117,17 @@ function mockBackend({ insertStatus = 201, row = null } = {}) {
   return { calls, read: () => stored };
 }
 
-test('meal options are exactly Veg, Non Veg, and Both', () => {
-  assert.deepEqual(MEAL_OPTIONS, ['Veg', 'Non Veg', 'Both']);
+test('reception meal options are Vegetarian, Non-vegetarian, and Both', () => {
+  assert.deepEqual(RECEPTION_MEAL_OPTIONS, ['Vegetarian', 'Non-vegetarian', 'Both']);
 });
 
-test('accepts every meal, attending alone, and more than four additional guests', () => {
-  for (const meal of MEAL_OPTIONS) {
-    assert.equal(validateRsvp({ ...valid(), meal }), null);
-  }
+test('accepts a wedding without a meal, every reception meal, and more than four additional guests', () => {
   assert.equal(validateRsvp(valid(0)), null);
+  assert.equal(validateRsvp({ ...valid(), meal: '' }), null);
+  assert.equal(validateRsvp({ ...valid(), meal: 'Vegetarian' }), null);
+  for (const meal of RECEPTION_MEAL_OPTIONS) {
+    assert.equal(validateRsvp(reception(meal)), null);
+  }
   assert.equal(validateRsvp(valid(5)), null);
   assert.equal(validateRsvp(valid(12)), null);
   assert.equal(validateRsvp({ ...valid(), attendance: 'no', meal: 'Veg', additionalGuests: 4, dietary: '' }), null);
@@ -130,8 +139,9 @@ test('rejects malformed RSVPs and invalid meals', () => {
     [],
     {},
     { ...valid(), email: 'invalid' },
-    { ...valid(), meal: '' },
-    { ...valid(), meal: 'Vegetarian' },
+    { ...valid(), event: 'party' },
+    reception('', { meal: '' }),
+    reception('Veg'),
     { ...valid(), additionalGuests: -1 },
     { ...valid(), additionalGuests: 1.5 },
     { ...valid(), additionalGuests: '4' },
@@ -185,10 +195,11 @@ test('preview, partial configuration, success, failure, and duplicates', async (
     assert.equal(response.body.notification, 'sent');
     const insert = success.calls.find((call) => call.method === 'POST' && call.url.includes('/rest/v1/rsvps'));
     assert.equal(insert.body.email, 'guest@example.com');
-    assert.equal(insert.body.meal, 'Veg');
+    assert.equal(insert.body.event, 'wedding');
+    assert.equal(insert.body.meal, '');
     assert.equal(insert.body.additional_guests, 0);
     assert.equal(insert.body.total_attending, 1);
-    assert.deepEqual(insert.body.guests, [{ name: 'Guest One', meal: 'Veg' }]);
+    assert.deepEqual(insert.body.guests, [{ name: 'Guest One', meal: '' }]);
     assert.equal(insert.body.dietary, 'No nuts');
     assert.equal(insert.headers.Authorization, 'Bearer test-key');
     assert.equal(sentMail.length, 1);
@@ -196,7 +207,7 @@ test('preview, partial configuration, success, failure, and duplicates', async (
     assert.equal(email.to, 'couple@example.com');
     assert.equal(email.from, 'sender@gmail.com');
     const stamp = formatSubmittedAt('2026-10-01T15:30:00.000Z', wedding.timezone);
-    for (const field of ['Primary guest: Guest One', 'Email: guest@example.com', 'Attendance: Attending', 'Additional guests: 0', 'Total attending: 1', "Primary guest's meal preference: Veg", 'Dietary requirements: No nuts', 'Personal message: Congratulations', `Submitted: ${stamp}`, `${wedding.groomFirst} ${wedding.groomLast} & ${wedding.brideFirst} ${wedding.brideLast}`]) {
+    for (const field of ['Event: Wedding', 'Primary guest: Guest One', 'Email: guest@example.com', 'Attendance: Attending', 'Additional guests: 0', 'Total attending: 1', 'Meal: Vegetarian meal served', 'Dietary requirements: No nuts', 'Personal message: Congratulations', `Submitted: ${stamp}`, `${wedding.groomFirst} ${wedding.groomLast} & ${wedding.brideFirst} ${wedding.brideLast}`]) {
       assert.ok(email.text.includes(field), field);
     }
     assert.equal(email.html.includes('<script>'), false);
@@ -262,7 +273,8 @@ test('decline emails report nobody attending and do not require a meal', async (
     assert.match(email.text, /Attendance: Declined/);
     assert.match(email.text, /Additional guests: 0/);
     assert.match(email.text, /Total attending: 0/);
-    assert.match(email.text, /Primary guest's meal preference: None/);
+    assert.match(email.text, /Event: Wedding/);
+    assert.match(email.text, /Meal: None/);
     assert.match(email.text, /Personal message: We will miss it/);
     const insert = backend.calls.find((call) => call.method === 'POST' && call.url.includes('/rest/v1/rsvps'));
     assert.equal(insert.body.additional_guests, 0);
@@ -285,18 +297,20 @@ test('more than four additional guests are stored without companion details', as
     useEmail();
     const backend = mockBackend();
     const response = res();
-    await handler({ method: 'POST', headers: {}, body: { ...valid(6), meal: 'Both' } }, response);
+    await handler({ method: 'POST', headers: {}, body: reception('Both', { additionalGuests: 6 }) }, response);
     assert.equal(response.code, 201);
     const insert = backend.calls.find((call) => call.method === 'POST' && call.url.includes('/rest/v1/rsvps'));
+    assert.equal(insert.body.event, 'reception');
     assert.equal(insert.body.additional_guests, 6);
     assert.equal(insert.body.total_attending, 7);
     assert.equal(insert.body.meal, 'Both');
     assert.deepEqual(insert.body.guests, [{ name: 'Guest One', meal: 'Both' }]);
     assert.equal(sentMail.length, 1);
     const email = sentMail[0];
+    assert.match(email.text, /Event: Reception/);
     assert.match(email.text, /Additional guests: 6/);
     assert.match(email.text, /Total attending: 7/);
-    assert.match(email.text, /Primary guest's meal preference: Both/);
+    assert.match(email.text, /Meal: Both/);
     assert.equal(email.text.includes('Guest Two'), false);
   } finally {
     globalThis.fetch = originalFetch;
@@ -311,8 +325,9 @@ test('notification email escapes guest content', () => {
     created_at: '2026-10-01T15:30:00.000Z',
     name: '<Guest & Co>',
     email: 'guest@example.com',
+    event: 'reception',
     attendance: 'yes',
-    meal: 'Non Veg',
+    meal: 'Non-vegetarian',
     additional_guests: 2,
     total_attending: 3,
     dietary: '',
@@ -320,7 +335,7 @@ test('notification email escapes guest content', () => {
   });
   assert.match(message.html, /&lt;Guest &amp; Co&gt;/);
   assert.equal(message.html.includes('<Guest'), false);
-  assert.match(message.text, /Non Veg/);
+  assert.match(message.text, /Non-vegetarian/);
   assert.match(message.text, /America\/Chicago|UTC/);
 });
 

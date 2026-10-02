@@ -26,7 +26,7 @@
 }
 
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; scroll-padding-top: 96px; }
+html { scroll-behavior: smooth; scroll-padding-top: calc(var(--silk-band) + 84px + 16px); }
 body { margin: 0; overflow-x: hidden; background: radial-gradient(circle at top, #fffaf3 0%, var(--ivory) 42%, #f6ecda 100%); }
 img { max-width: 100%; display: block; }
 a { color: inherit; text-decoration: none; }
@@ -183,13 +183,19 @@ h1 em { display: block; font-size: 0.55em; font-style: italic; color: var(--gold
 .intro h2, .details h2 { font-size: clamp(2.4rem, 5vw, 3.6rem); color: var(--maroon-deep); margin-bottom: 16px; }
 .intro h2 em, .details h2 em { font-style: italic; color: var(--gold); }
 .intro > p:not(.eyebrow) { color: var(--muted); max-width: 40rem; margin: 0 auto; }
-.event-facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 40px; }
-.event-facts div { padding: 8px 18px; }
-.event-facts div + div { border-left: 1px solid var(--line); }
+.event-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 36px;
+}
+.event-actions .button { min-width: 180px; }
+.event-facts { display: grid; justify-content: center; margin-top: 36px; }
+.event-facts div { max-width: 28rem; padding: 8px 18px; }
 .event-facts span { font-size: 0.75rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--leaf-deep); }
 .event-facts h3 { font-size: clamp(1.35rem, 2.2vw, 1.65rem); margin: 10px 0; color: var(--maroon); text-wrap: balance; }
 .event-facts p { color: var(--muted); margin: 0; }
-.muhurtham-time { color: var(--maroon); font-weight: 600; letter-spacing: 0.06em; }
 
 .rsvp-section {
   position: relative;
@@ -201,6 +207,15 @@ h1 em { display: block; font-size: 0.55em; font-style: italic; color: var(--gold
   grid-template-columns: 0.9fr 1.1fr;
   gap: 48px;
   align-items: start;
+}
+.reception-section { justify-items: center; }
+.reception-section .form-wrap { grid-column: 1 / -1; width: min(100%, 640px); }
+.meal-note {
+  margin: 4px 0 16px;
+  color: var(--maroon-deep);
+  font-family: var(--serif);
+  font-size: 1.2rem;
+  line-height: 1.4;
 }
 .rsvp-garland-row {
   grid-column: 1 / -1;
@@ -219,6 +234,15 @@ h1 em { display: block; font-size: 0.55em; font-style: italic; color: var(--gold
   width: 100%;
   height: auto;
   display: block;
+}
+.sumuhurtham {
+  grid-column: 1 / -1;
+  margin: 14px 0 0;
+  text-align: center;
+  font-family: var(--serif);
+  font-size: clamp(1.45rem, 2.6vw, 1.9rem);
+  line-height: 1.25;
+  color: var(--maroon-deep);
 }
 .form-wrap { position: relative; min-width: 0; }
 .rsvp-copy h2 { font-size: clamp(2.8rem, 5vw, 4rem); color: var(--maroon-deep); }
@@ -419,8 +443,7 @@ footer p { margin: 0; letter-spacing: 0.08em; font-size: 0.85rem; }
   .hero-copy > .button { justify-self: auto; }
   .hero-art { display: block; grid-column: auto; grid-row: auto; padding: 18px 0 0; }
   .hero-film { width: min(100%, 640px); height: auto; aspect-ratio: 4 / 3; margin-inline: auto; }
-  .event-facts { grid-template-columns: 1fr; }
-  .event-facts div + div { border-left: 0; border-top: 1px solid var(--line); padding-top: 18px; }
+  .event-actions { flex-direction: column; }
   .rsvp-copy, .intro, .details { text-align: center; }
   .note, .hero .eyebrow, .hero-date { justify-content: center; }
   .signature { display: none; }
@@ -428,6 +451,7 @@ footer p { margin: 0; letter-spacing: 0.08em; font-size: 0.85rem; }
 }
 
 @media (max-width: 720px) {
+  html { scroll-padding-top: calc(var(--silk-band) + 72px + 16px); }
   .header-bar { height: 72px; padding: 0 16px; }
   .menu-toggle { display: grid; place-items: center; }
   nav {

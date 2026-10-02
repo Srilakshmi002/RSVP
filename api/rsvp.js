@@ -1,4 +1,4 @@
-import { MEAL_OPTIONS } from '../shared/meals.js';
+import { RECEPTION_MEAL_OPTIONS, RSVP_EVENTS } from '../shared/meals.js';
 import { deliverNotification } from './deliver.js';
 import { readJson, sendJson } from './http.js';
 import { insertRsvp, supabaseConfig } from './store.js';
@@ -7,7 +7,7 @@ const bounded = (value, max, required = false) => typeof value === 'string' && v
 const POSTGRES_INT_MAX = 2147483647;
 
 function mealPhrase() {
-  return `${MEAL_OPTIONS.slice(0, -1).join(', ')}, or ${MEAL_OPTIONS.at(-1)}`;
+  return `${RECEPTION_MEAL_OPTIONS.slice(0, -1).join(', ')}, or ${RECEPTION_MEAL_OPTIONS.at(-1)}`;
 }
 
 function wholeCount(value) {
@@ -22,7 +22,8 @@ export function validateRsvp(body) {
   if (body.attendance === 'yes' && !wholeCount(body.additionalGuests)) {
     return 'Please enter a whole number of additional guests.';
   }
-  if (body.attendance === 'yes' && !MEAL_OPTIONS.includes(typeof body.meal === 'string' ? body.meal.trim() : '')) {
+  if (!RSVP_EVENTS.includes(body.event)) return 'Please choose the wedding or the reception.';
+  if (body.event === 'reception' && body.attendance === 'yes' && !RECEPTION_MEAL_OPTIONS.includes(typeof body.meal === 'string' ? body.meal.trim() : '')) {
     return `Please choose ${mealPhrase()} for yourself.`;
   }
   if (body.dietary != null && body.dietary !== '' && !bounded(body.dietary, 500)) return 'Please shorten your dietary note.';
@@ -38,6 +39,7 @@ function savedRecord(row, submitted) {
     name: row.name || submitted.name,
     email: row.email || submitted.email,
     attendance: row.attendance || submitted.attendance,
+    event: row.event || submitted.event,
     meal: row.meal ?? submitted.meal,
     additional_guests: row.additional_guests ?? submitted.additional_guests,
     total_attending: row.total_attending ?? submitted.total_attending,
@@ -65,10 +67,11 @@ export default async function handler(req, res) {
   const body = parsed.body;
   const attending = body.attendance === 'yes';
   const additionalGuests = attending ? body.additionalGuests : 0;
-  const meal = attending ? body.meal.trim() : '';
+  const meal = body.event === 'reception' && attending ? body.meal.trim() : '';
   const record = {
     name: body.name.trim(),
     email: body.email.trim().toLowerCase(),
+    event: body.event,
     attendance: body.attendance,
     meal,
     additional_guests: additionalGuests,
@@ -90,7 +93,8 @@ export default async function handler(req, res) {
     return sendJson(res, 503, { error: 'Your response could not be saved. Please try again or contact the couple.' });
   }
   if (inserted.status === 409) {
-    return sendJson(res, 409, { error: 'We already have an RSVP for this email. Please contact the couple to make changes.' });
+    const eventName = body.event === 'reception' ? 'reception' : 'wedding';
+    return sendJson(res, 409, { error: `We already have a ${eventName} RSVP for this email. Please contact the couple to make changes.` });
   }
   if (!inserted.ok || !inserted.row?.id) {
     return sendJson(res, 503, { error: 'Your response could not be saved. Please try again or contact the couple.' });

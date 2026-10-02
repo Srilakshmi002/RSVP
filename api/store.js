@@ -77,7 +77,7 @@ export async function claimNotification(id) {
   return { ok: true, claimed: Array.isArray(stale.payload) && stale.payload.length > 0 };
 }
 
-const RSVP_COLUMNS = 'id,created_at,name,email,attendance,meal,additional_guests,total_attending,guests,dietary,message,notification_status,notification_error,notification_claimed_at';
+const RSVP_COLUMNS = 'id,created_at,name,email,event,attendance,meal,additional_guests,total_attending,guests,dietary,message,notification_status,notification_error,notification_claimed_at';
 
 export async function getRsvp({ id, email }) {
   const { url, key } = supabaseConfig();
