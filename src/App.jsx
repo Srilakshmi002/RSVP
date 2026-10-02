@@ -274,7 +274,7 @@ export default function App() {
             </div>
             <div className="hero-art">
               <div className="couple-film hero-film">
-                <CoupleFilm active={!showIntro} />
+                <CoupleFilm />
               </div>
             </div>
           </section>
