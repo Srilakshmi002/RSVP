@@ -423,9 +423,9 @@ footer {
 .opening-kolam { width: 64px; height: 64px; color: var(--gold-bright); margin: 0 auto 8px; }
 .couple-film {
   position: relative;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 1374 / 1145;
   border: 3px solid var(--gold);
-  background: #2d0c14 url('/images/couple-poster.jpg') center / cover no-repeat;
+  background: #2d0c14 url('/images/picture.jpeg') center 32% / cover no-repeat;
   overflow: hidden;
 }
 .opening-film {
@@ -436,26 +436,13 @@ footer {
 .hero-film {
   box-shadow: 0 0 0 8px rgba(110, 30, 44, 0.08);
 }
-.couple-film video,
 .couple-film img {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 42%;
-}
-.couple-video {
-  pointer-events: none;
-  background: transparent;
-}
-.couple-film video::-webkit-media-controls,
-.couple-film video::-webkit-media-controls-enclosure,
-.couple-film video::-webkit-media-controls-panel,
-.couple-film video::-webkit-media-controls-start-playback-button {
-  display: none !important;
-  opacity: 0;
-  pointer-events: none;
+  object-position: center 32%;
 }
 .opening-kicker, .opening-names, .opening-date { opacity: 0; transform: translateY(10px); transition: opacity 0.7s ease, transform 0.7s ease; }
 .opening.show-names .opening-kicker,
@@ -488,7 +475,7 @@ footer {
   .hero-copy { display: flex; flex-direction: column; align-items: center; }
   .hero-copy > .button { justify-self: auto; }
   .hero-art { display: block; grid-column: auto; grid-row: auto; padding: 18px 0 0; }
-  .hero-film { width: min(100%, 640px); height: auto; aspect-ratio: 4 / 3; margin-inline: auto; }
+  .hero-film { width: min(100%, 640px); height: auto; aspect-ratio: 1374 / 1145; margin-inline: auto; }
   .event-actions { flex-direction: column; }
   .rsvp-copy, .intro, .details, .reception-details { text-align: center; }
   .venue-pair { grid-template-columns: 1fr; gap: 36px; }
