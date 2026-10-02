@@ -25,7 +25,7 @@ Edit **`src/config.js`**. That file holds:
 - Portrait image paths
 - Date, Muhurtham time, RSVP deadline, venue name, and street address
 - Public contact email (`contactEmail`)
-- Schedule and attire
+- Schedule
 - Time zone used to label the notification email (`timezone`, `America/Chicago`, the local time in Aubrey, Texas)
 
 The browser tab title is set from those names when the page loads. Also update the `<title>` in `index.html` so the tab is correct before JavaScript runs.

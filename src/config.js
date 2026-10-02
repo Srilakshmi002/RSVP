@@ -29,7 +29,13 @@ export const wedding = {
   muhurtham,
   timezone: 'America/Chicago',
 
-  attire: 'Festive and traditional attire is welcome. Silks, jewel tones, and comfortable shoes are a lovely choice.',
+  reception: {
+    title: 'Reception',
+    date: 'October 16, 2026',
+    time: '7:00 PM',
+    venue: 'Arca Acres',
+    address: '8028 FM2153, Aubrey, TX 76227',
+  },
 
   schedule: [
     {
