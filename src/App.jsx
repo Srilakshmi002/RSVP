@@ -1,14 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowRight, ArrowUpRight, Check, Heart, MapPin, Menu, X } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Check, Heart, Menu, X } from 'lucide-react';
 import { RECEPTION_MEAL_OPTIONS } from '../shared/meals.js';
 import { coupleNames, venueMapsUrl, wedding as w } from './config';
 import CoupleFilm from './CoupleFilm';
-import { BrassLamp, Kolam, SilkBorder } from './decor';
+import { BrassLamp, Coupe, Kolam, SilkBorder } from './decor';
 import Intro from './Intro';
 
-function MapsLink() {
+function MapsLink({ query }) {
+  const href = query
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
+    : venueMapsUrl();
   return (
-    <a className="maps-link" href={venueMapsUrl()} target="_blank" rel="noopener noreferrer">
+    <a className="maps-link" href={href} target="_blank" rel="noopener noreferrer">
       View on Google Maps <ArrowUpRight size={14} aria-hidden="true" />
     </a>
   );
@@ -285,9 +288,6 @@ export default function App() {
               <a className="button" href="#rsvp">Wedding</a>
               <a className="button" href="#reception">Reception</a>
             </div>
-            <div className="event-facts">
-              <div><span>Attire</span><h3>Festive & traditional</h3><p>{w.attire}</p></div>
-            </div>
           </section>
 
           <section className="rsvp-section" id="rsvp">
@@ -313,6 +313,17 @@ export default function App() {
           </section>
 
           <section className="rsvp-section reception-section" id="reception">
+            <Coupe className="reception-coupe left" />
+            <Coupe className="reception-coupe right" />
+            <div className="reception-details">
+              <Coupe className="reception-mark" />
+              <h2>{w.reception.title}</h2>
+              <p>{w.reception.date}</p>
+              <p>{w.reception.time}</p>
+              <p className="reception-venue">{w.reception.venue}</p>
+              <p>{w.reception.address}</p>
+              <MapsLink query={`${w.reception.venue}, ${w.reception.address}`} />
+            </div>
             <div className="form-wrap">
               <RsvpForm event="reception" />
             </div>
@@ -321,26 +332,34 @@ export default function App() {
           <section className="details" id="details">
             <p className="eyebrow">The day itself</p>
             <h2>A little look at <em>the celebration.</em></h2>
-            <div className="timeline">
-              {w.schedule.map((item) => (
-                <article key={`${item.time}-${item.title}`}>
-                  <BrassLamp className="timeline-lamp" />
-                  <p className="eyebrow">{item.time}</p>
-                  <h3>{item.title}</h3>
-                  <p>{item.detail}</p>
-                </article>
-              ))}
+            <div className="venue-pair">
+              <article>
+                <h3>Wedding</h3>
+                <p>{w.date.replace(/^\w+,\s*/, '')} · {w.muhurtham}</p>
+              </article>
+              <article>
+                <h3>Reception</h3>
+                <p>{w.reception.date} · {w.reception.time}</p>
+              </article>
             </div>
-            <div className="venue-block">
-              <p className="venue-line"><MapPin size={16} aria-hidden="true" /> <span><strong>{w.venue}</strong> · {w.address}</span></p>
-              <MapsLink />
+            <div className="venue-pair">
+              <article>
+                <h3>Wedding Venue</h3>
+                <p>{w.venue}</p>
+                <p>{w.address}</p>
+                <MapsLink />
+              </article>
+              <article>
+                <h3>Reception Venue</h3>
+                <p>{w.reception.venue}</p>
+                <p>{w.reception.address}</p>
+                <MapsLink query={`${w.reception.venue}, ${w.reception.address}`} />
+              </article>
             </div>
           </section>
         </main>
         <footer>
           <span className="footer-names">{coupleNames('full')}</span>
-          <p>{w.shortDate} <span>·</span> {w.venue}<span className="footer-address">{w.address}</span></p>
-          <span className="footer-love">Made with love <Heart size={13} aria-hidden="true" /></span>
         </footer>
       </div>
     </>

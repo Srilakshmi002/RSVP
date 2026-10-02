@@ -21,6 +21,17 @@ export function Kolam({ className }) {
   );
 }
 
+export function Coupe({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 64 96" aria-hidden="true">
+      <path d="M10 12h44c0 14-9 25-22 29C19 37 10 26 10 12z" fill="none" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M32 41v30" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M18 74h28" stroke="currentColor" strokeWidth="1.4" />
+      <circle cx="32" cy="24" r="1.6" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function BrassLamp({ className }) {
   return (
     <svg className={className} viewBox="0 0 80 150" aria-hidden="true">
