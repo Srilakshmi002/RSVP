@@ -17,7 +17,7 @@ export const wedding = {
 
   date: 'Wednesday, October 14, 2026',
   shortDate: '10.14.2026',
-  deadline: 'October 7, 2026',
+  deadline: 'October 10, 2026',
   venue: 'The Milestone Mansion Aubrey',
   address: '1301 W Sherman Dr, Aubrey, TX 76227',
   location: 'Aubrey, TX',
