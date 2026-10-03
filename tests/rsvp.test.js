@@ -94,7 +94,7 @@ function mockBackend({ insertStatus = 201, row = null } = {}) {
     const target = String(url);
     const parsed = options.body ? JSON.parse(options.body) : null;
     calls.push({ url: target, method, body: parsed, headers: options.headers || {} });
-    if (target.includes('/rest/v1/rsvps') && method === 'POST') {
+    if (/\/rest\/v1\/(rsvps|reception_rsvps)(?:\?|$)/.test(target) && method === 'POST') {
       if (insertStatus === 409) return http(409, { message: 'duplicate' });
       if (insertStatus >= 400) return http(insertStatus, { message: 'db error' });
       stored = {
@@ -105,13 +105,13 @@ function mockBackend({ insertStatus = 201, row = null } = {}) {
       };
       return http(201, [stored]);
     }
-    if (target.includes('/rest/v1/rsvps') && method === 'PATCH') {
+    if (/\/rest\/v1\/(rsvps|reception_rsvps)(?:\?|$)/.test(target) && method === 'PATCH') {
       if (!filterMatches(stored, target)) return http(200, []);
       stored = { ...stored, ...parsed };
       return http(200, [stored]);
     }
-    if (target.includes('/rest/v1/rsvps') && method === 'GET') return http(200, stored ? [stored] : []);
-    if (target.includes('/rest/v1/rsvps') && method === 'DELETE') return http(204, null);
+    if (/\/rest\/v1\/(rsvps|reception_rsvps)(?:\?|$)/.test(target) && method === 'GET') return http(200, stored ? [stored] : []);
+    if (/\/rest\/v1\/(rsvps|reception_rsvps)(?:\?|$)/.test(target) && method === 'DELETE') return http(204, null);
     throw new Error(`Unexpected fetch ${method} ${target}`);
   };
   return { calls, read: () => stored };
@@ -299,7 +299,9 @@ test('more than four additional guests are stored without companion details', as
     const response = res();
     await handler({ method: 'POST', headers: {}, body: reception('Both', { additionalGuests: 6 }) }, response);
     assert.equal(response.code, 201);
-    const insert = backend.calls.find((call) => call.method === 'POST' && call.url.includes('/rest/v1/rsvps'));
+    const insert = backend.calls.find((call) => call.method === 'POST' && call.url.endsWith('/rest/v1/reception_rsvps'));
+    assert.ok(backend.calls.every((call) => call.url.includes('/rest/v1/reception_rsvps')));
+    assert.equal(backend.read().notification_status, 'sent');
     assert.equal(insert.body.event, 'reception');
     assert.equal(insert.body.additional_guests, 6);
     assert.equal(insert.body.total_attending, 7);
@@ -446,6 +448,35 @@ test('retry authorization, missing guests, failed delivery, and duplicates', asy
     assert.equal(response.body.notification, 'unconfigured');
     assert.equal(sentMail.length, 0);
     assert.equal(pending.read().notification_status, 'unconfigured');
+  } finally {
+    globalThis.fetch = originalFetch;
+    useMailTransport();
+    restoreEnv(savedEnv);
+  }
+});
+
+
+test('reception notification retries read and update only the reception table', async () => {
+  const savedEnv = snapshotEnv();
+  const originalFetch = globalThis.fetch;
+  try {
+    clearEnv();
+    useSupabase();
+    useEmail();
+    process.env.NOTIFY_RETRY_SECRET = 'retry-secret';
+    const backend = mockBackend({ row: {
+      id: RSVP_ID, name: 'Reception Guest', email: 'guest@example.com',
+      event: 'reception', attendance: 'yes', meal: 'Vegetarian',
+      additional_guests: 2, total_attending: 3, guests: [],
+      dietary: '', message: '', notification_status: 'failed',
+    } });
+    const response = res();
+    await notify({ method: 'POST', headers: { 'x-notify-secret': 'retry-secret' },
+      body: { email: 'guest@example.com', event: 'reception' } }, response);
+    assert.equal(response.body.notified, true);
+    assert.equal(backend.read().notification_status, 'sent');
+    assert.ok(backend.calls.every((call) => call.url.includes('/rest/v1/reception_rsvps')));
+    assert.equal(backend.calls.some((call) => call.method === 'POST'), false);
   } finally {
     globalThis.fetch = originalFetch;
     useMailTransport();
