@@ -33,9 +33,16 @@ function rowFrom(payload) {
   return null;
 }
 
+function rsvpTable(event = 'wedding') {
+  if (event === 'reception') return 'reception_rsvps';
+  if (event === 'wedding') return 'rsvps';
+  throw new Error('Invalid RSVP event.');
+}
+
 export async function insertRsvp(record) {
   const { url, key } = supabaseConfig();
-  const result = await request(`${url}/rest/v1/rsvps`, {
+  const event = record.event;
+  const result = await request(`${url}/rest/v1/${rsvpTable(event)}`, {
     method: 'POST',
     key,
     body: record,
@@ -44,9 +51,9 @@ export async function insertRsvp(record) {
   return { ...result, row: rowFrom(result.payload) };
 }
 
-export async function patchRsvp(id, fields) {
+export async function patchRsvp(id, fields, event = 'wedding') {
   const { url, key } = supabaseConfig();
-  return request(`${url}/rest/v1/rsvps?id=eq.${id}`, {
+  return request(`${url}/rest/v1/${rsvpTable(event)}?id=eq.${id}`, {
     method: 'PATCH',
     key,
     body: fields,
@@ -54,7 +61,7 @@ export async function patchRsvp(id, fields) {
   });
 }
 
-export async function claimNotification(id) {
+export async function claimNotification(id, event = 'wedding') {
   const { url, key } = supabaseConfig();
   const claimBody = {
     notification_status: 'sending',
@@ -62,7 +69,7 @@ export async function claimNotification(id) {
     notification_error: null,
   };
   const fresh = await request(
-    `${url}/rest/v1/rsvps?id=eq.${id}&notification_status=in.(pending,failed,unconfigured)`,
+    `${url}/rest/v1/${rsvpTable(event)}?id=eq.${id}&notification_status=in.(pending,failed,unconfigured)`,
     { method: 'PATCH', key, body: claimBody, prefer: 'return=representation' },
   );
   if (!fresh.ok) return { ok: false, claimed: false };
@@ -70,7 +77,7 @@ export async function claimNotification(id) {
 
   const staleBefore = new Date(Date.now() - 2 * 60 * 1000).toISOString();
   const stale = await request(
-    `${url}/rest/v1/rsvps?id=eq.${id}&notification_status=eq.sending&notification_claimed_at=lt.${encodeURIComponent(staleBefore)}`,
+    `${url}/rest/v1/${rsvpTable(event)}?id=eq.${id}&notification_status=eq.sending&notification_claimed_at=lt.${encodeURIComponent(staleBefore)}`,
     { method: 'PATCH', key, body: claimBody, prefer: 'return=representation' },
   );
   if (!stale.ok) return { ok: false, claimed: false };
@@ -79,10 +86,10 @@ export async function claimNotification(id) {
 
 const RSVP_COLUMNS = 'id,created_at,name,email,event,attendance,meal,additional_guests,total_attending,guests,dietary,message,notification_status,notification_error,notification_claimed_at';
 
-export async function getRsvp({ id, email }) {
+export async function getRsvp({ id, email, event = 'wedding' }) {
   const { url, key } = supabaseConfig();
   const filter = id ? `id=eq.${id}` : `email=eq.${encodeURIComponent(email)}`;
-  const result = await request(`${url}/rest/v1/rsvps?${filter}&select=${RSVP_COLUMNS}`, { method: 'GET', key });
+  const result = await request(`${url}/rest/v1/${rsvpTable(event)}?${filter}&select=${RSVP_COLUMNS}`, { method: 'GET', key });
   if (!result.ok || !Array.isArray(result.payload)) return null;
   return result.payload[0] || null;
 }

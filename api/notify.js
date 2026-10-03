@@ -35,9 +35,12 @@ export default async function handler(req, res) {
   if (id && !UUID.test(id)) return sendJson(res, 400, { error: 'Please provide a valid RSVP id.' });
   if (!id && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return sendJson(res, 400, { error: 'Please provide the guest email or RSVP id.' });
 
+  const event = body.event ?? 'wedding';
+  if (!['wedding', 'reception'].includes(event)) return sendJson(res, 400, { error: 'Please choose the wedding or the reception.' });
+
   let row;
   try {
-    row = await getRsvp(id ? { id } : { email });
+    row = await getRsvp(id ? { id, event } : { email, event });
   } catch {
     return sendJson(res, 503, { error: 'The saved RSVP could not be loaded. Nothing new was created.' });
   }

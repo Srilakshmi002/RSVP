@@ -47,15 +47,15 @@ The form asks how many additional guests are coming with the person filling it o
 
 ## Meals
 
-The person completing the form chooses **Veg**, **Non Veg**, or **Both**. That choice is theirs alone. A declined invitation does not ask for a meal. Dietary notes are optional and are hidden when the guest declines.
+The reception form offers **Vegetarian**, **Non-vegetarian**, or **Both**. Wedding replies do not collect a meal. That choice is theirs alone. A declined invitation does not ask for a meal. Dietary notes are optional and are hidden when the guest declines.
 
 ## Supabase
 
 1. Create a Supabase project.
 2. For a new project, run `database/schema.sql` in the SQL editor.
-3. If you already created `public.rsvps` from an earlier schema, run `database/migration-meals-and-notifications.sql` first when that table does not yet have meal checks. Then run `database/migration-additional-guests.sql`, then `database/migration-wedding-reception.sql`. The last migration keeps existing rows as wedding replies and lets the same email reply once for the wedding and once for the reception. A brand-new database only needs `database/schema.sql`.
+3. If you already created `public.rsvps` from an earlier schema, run `database/migration-meals-and-notifications.sql` first when that table does not yet have meal checks. Then run `database/migration-additional-guests.sql`, then `database/migration-wedding-reception.sql`. The last migration keeps existing rows as wedding replies and lets the same email reply once for the wedding and once for the reception. Then run `database/migration-separate-reception.sql` to create the reception table and move existing reception rows, preserving their counts and notification state. Run migrations before deploying the updated API. A brand-new database only needs `database/schema.sql`.
 4. In Vercel, set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. Copy the names from `.env.example`. Never expose the service role key in frontend code or give it a `VITE_` prefix.
-5. Redeploy, submit a test RSVP, and confirm the row in the Supabase `rsvps` table before sharing the site.
+5. Redeploy, submit a test RSVP, and confirm wedding rows in `rsvps` and reception rows in `reception_rsvps` before sharing the site.
 
 No database variables means an explicitly labeled preview: nothing is saved and no email is sent. Setting only one of the two variables returns an error. One response is allowed per email address for each event. Guests should contact you to change a response. Row-level security is on, with no public policies. Read and export responses from the Supabase dashboard.
 
@@ -102,7 +102,7 @@ curl -sS -X POST "https://YOUR-DOMAIN/api/notify" \
   -d '{"email":"guest@example.com"}'
 ```
 
-You can send `{"id":"<uuid>"}` instead of an email. A row already marked `sent` returns `alreadySent: true` and is not emailed again. A `sending` status older than two minutes can be claimed again.
+You can send `{"id":"<uuid>"}` instead of an email. For reception retries, include `"event":"reception"` in the request; omitted events default to wedding. A row already marked `sent` returns `alreadySent: true` and is not emailed again. A `sending` status older than two minutes can be claimed again.
 
 `/api/notify` does nothing unless `NOTIFY_RETRY_SECRET` is set, and it never inserts a new RSVP.
 
@@ -133,3 +133,20 @@ npm run build
 ```
 
 Tests cover validation, meals, accepting and declining, preview mode, database success, duplicate RSVPs, storage failures, successful email, email failure after a save, unconfigured email, and notification retries (including duplicates). Database and email calls are mocked.
+
+## Separate attendance counts
+
+Wedding submissions use `public.rsvps`; reception submissions use `public.reception_rsvps`.
+Each table allows one response per email. Count people by summing `total_attending`,
+which includes the primary guest and additional guests (declines contribute zero):
+
+```sql
+select coalesce(sum(total_attending), 0) as wedding_attending
+from public.rsvps where event = 'wedding';
+
+select coalesce(sum(total_attending), 0) as reception_attending
+from public.reception_rsvps;
+```
+
+For reception notification troubleshooting, use `public.reception_rsvps` in the
+notification query above.
