@@ -179,6 +179,9 @@ claim and retrying, to avoid duplicate mail.
 Deploy the combined report cron on only one of the two Vercel projects. The other
 project does not need its own report cron when all events share the same database.
 The SQL function maps `rsvps`, `reception_rsvps`, `haldi_rsvps`, `pelli_rsvps`,
-and `vratham_rsvps`. Verify all five tables have `created_at` (timestamptz),
-`attendance` (`yes`/`no`), and `total_attending` (including additional guests)
-before running the migration. A mismatch requires adapting the query first.
+and `vratham_rsvps`. Wedding/reception use `created_at`, `attendance` (`yes`/`no`), and
+`total_attending`. Haldi/Pelli/Vratham use `submitted_at`, `attending` (boolean),
+and `guest_count`, which includes the primary guest. Declines contribute zero
+people attending. Daily reply
+counts use submission time, not edit time; changing an existing response does
+not create another reply in the report.
