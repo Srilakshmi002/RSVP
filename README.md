@@ -150,3 +150,28 @@ from public.reception_rsvps;
 
 For reception notification troubleshooting, use `public.reception_rsvps` in the
 notification query above.
+
+## Daily RSVP email at 6:00 PM Chicago time
+
+The daily email goes to the existing `RSVP_NOTIFY_EMAIL`. It includes wedding and
+reception reply counts for today through 6 PM, the previous full day's reply counts,
+cumulative reply counts, and cumulative people attending (including additional guests).
+Acceptances and declines both count as replies. Zero-response days still send a report.
+
+To activate:
+
+1. Run `database/migration-daily-summary.sql` in Supabase (also required for new databases).
+2. Add a long random `CRON_SECRET` in Vercel. Keep the existing Supabase and Gmail variables.
+3. Deploy this version to production.
+
+Two daily UTC cron triggers cover daylight saving changes; the endpoint only sends
+in Chicago's 6 PM hour. The scheduled cutoff remains exactly 6 PM even if invocation
+is late. Vercel Hobby can invoke anywhere within the hour; use a plan with minute
+precision if 6:00 PM timing is required. See https://vercel.com/docs/cron-jobs/usage-and-pricing.
+Cron triggers only run in production, not local or preview deployments.
+
+The private `rsvp_daily_reports` table claims each date to prevent overlapping sends.
+A failed email releases its claim so it can be retried during the 6 PM hour. Vercel
+cron does not automatically retry failures; inspect function logs. If a run crashes
+with a claim and no `sent_at`, confirm whether the email arrived before deleting the
+claim and retrying, to avoid duplicate mail.

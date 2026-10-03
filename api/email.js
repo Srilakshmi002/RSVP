@@ -103,9 +103,12 @@ export function buildRsvpEmail(rsvp, timeZone = wedding.timezone) {
 }
 
 export async function sendRsvpEmail(rsvp) {
+  return sendEmailMessage(buildRsvpEmail(rsvp));
+}
+
+export async function sendEmailMessage(message) {
   const config = emailConfig();
   if (!config.configured) return { ok: false, reason: 'unconfigured', error: 'Email service is not configured.' };
-  const message = buildRsvpEmail(rsvp);
   try {
     const transport = transportFor(config);
     const result = await transport.sendMail({
