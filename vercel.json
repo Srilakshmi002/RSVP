@@ -1,7 +1,7 @@
 {
   "framework": "vite",
   "crons": [
-    { "path": "/api/daily-summary", "schedule": "0 23 * * *" },
-    { "path": "/api/daily-summary", "schedule": "0 0 * * *" }
+    { "path": "/api/daily-summary", "schedule": "0 4 * * *" },
+    { "path": "/api/daily-summary", "schedule": "0 5 * * *" }
   ]
 }

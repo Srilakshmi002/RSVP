@@ -19,3 +19,28 @@ test('summary rejects unauthenticated requests before querying storage', async (
   await handler({ method: 'GET', headers: {} }, response);
   assert.equal(response.code, 401);
 });
+
+test('report date range includes both endpoints and stops after the final day', async () => {
+  const { reportSettings, reportDue } = await import('../api/daily-summary.js');
+  const settings = reportSettings({ RSVP_REPORT_START_DATE: '2026-10-03', RSVP_REPORT_END_DATE: '2026-12-01' });
+  assert.equal(reportDue({ date: '2026-10-03', hour: 23 }, settings), true);
+  assert.equal(reportDue({ date: '2026-12-01', hour: 23 }, settings), true);
+  assert.equal(reportDue({ date: '2026-12-02', hour: 23 }, settings), false);
+  assert.equal(reportDue({ date: '2026-10-02', hour: 23 }, settings), false);
+  assert.equal(reportDue({ date: '2026-10-03', hour: 18 }, settings), false);
+  assert.throws(() => reportSettings({}));
+  assert.throws(() => reportSettings({ RSVP_REPORT_END_DATE: '2026-02-30' }));
+});
+
+test('11 PM Eastern follows daylight saving', () => {
+  assert.deepEqual(reportClock(new Date('2026-10-04T03:00:00Z'), 'America/New_York'), { date: '2026-10-03', hour: 23 });
+  assert.deepEqual(reportClock(new Date('2026-12-04T04:00:00Z'), 'America/New_York'), { date: '2026-12-03', hour: 23 });
+});
+
+test('report includes readable labels for all five events', () => {
+  const events = ['wedding', 'reception', 'haldi', 'pellikuthuru_pellikoduku', 'vratham'];
+  const rows = events.map(event => ({ event, daily_replies: 0, previous_day_replies: 0, cumulative_replies: 0, attending_people: 0 }));
+  const { text } = buildSummaryEmail(rows, '2026-10-03');
+  for (const label of ['Wedding', 'Reception', 'Haldi', 'Pellikuthuru and Pellikoduku', 'Vratham']) assert.ok(text.includes(label));
+  assert.match(text, /11:00 PM America\/Chicago/);
+});

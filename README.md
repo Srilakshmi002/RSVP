@@ -151,27 +151,34 @@ from public.reception_rsvps;
 For reception notification troubleshooting, use `public.reception_rsvps` in the
 notification query above.
 
-## Daily RSVP email at 6:00 PM Chicago time
+## Daily RSVP email at 11:00 PM Chicago time
 
-The daily email goes to the existing `RSVP_NOTIFY_EMAIL`. It includes wedding and
-reception reply counts for today through 6 PM, the previous full day's reply counts,
+The daily email goes to the existing `RSVP_NOTIFY_EMAIL`. It includes wedding, reception, haldi, pellikuthuru and pellikoduku, and
+vratham reply counts for today through 11 PM, the previous full day's reply counts,
 cumulative reply counts, and cumulative people attending (including additional guests).
 Acceptances and declines both count as replies. Zero-response days still send a report.
 
 To activate:
 
 1. Run `database/migration-daily-summary.sql` in Supabase (also required for new databases).
-2. Add a long random `CRON_SECRET` in Vercel. Keep the existing Supabase and Gmail variables.
+2. Add a long random `CRON_SECRET` in Vercel. Keep the existing Supabase and Gmail variables. Set `RSVP_REPORT_TIMEZONE=America/Chicago`, `RSVP_REPORT_START_DATE=2026-10-03`, and `RSVP_REPORT_END_DATE` to the desired final date (`YYYY-MM-DD`). Both dates are inclusive. Missing or invalid end dates disable sending and return a configuration error.
 3. Deploy this version to production.
 
 Two daily UTC cron triggers cover daylight saving changes; the endpoint only sends
-in Chicago's 6 PM hour. The scheduled cutoff remains exactly 6 PM even if invocation
+in Chicago's 11 PM hour. The scheduled cutoff remains exactly 11 PM even if invocation
 is late. Vercel Hobby can invoke anywhere within the hour; use a plan with minute
-precision if 6:00 PM timing is required. See https://vercel.com/docs/cron-jobs/usage-and-pricing.
+precision if 11:00 PM timing is required. See https://vercel.com/docs/cron-jobs/usage-and-pricing.
 Cron triggers only run in production, not local or preview deployments.
 
 The private `rsvp_daily_reports` table claims each date to prevent overlapping sends.
-A failed email releases its claim so it can be retried during the 6 PM hour. Vercel
+A failed email releases its claim so it can be retried during the 11 PM hour. Vercel
 cron does not automatically retry failures; inspect function logs. If a run crashes
 with a claim and no `sent_at`, confirm whether the email arrived before deleting the
 claim and retrying, to avoid duplicate mail.
+
+Deploy the combined report cron on only one of the two Vercel projects. The other
+project does not need its own report cron when all events share the same database.
+The SQL function maps `rsvps`, `reception_rsvps`, `haldi_rsvps`, `pelli_rsvps`,
+and `vratham_rsvps`. Verify all five tables have `created_at` (timestamptz),
+`attendance` (`yes`/`no`), and `total_attending` (including additional guests)
+before running the migration. A mismatch requires adapting the query first.
